@@ -1,0 +1,17 @@
+# build output
+bin/
+obj/
+dist/
+dist-*/
+out/
+
+# IDE
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# OS
+Thumbs.db
+desktop.ini
