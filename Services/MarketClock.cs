@@ -57,8 +57,33 @@ public static class MarketClock
         _ => "休市"
     };
 
+    /// <summary>
+    /// Whether this market is worth polling right now: during the session, in the
+    /// 30 minutes before the open, and for the first 15 minutes of a session segment.
+    /// Closed markets and public holidays are skipped.
+    /// </summary>
+    public static bool ShouldPoll(string market, DateTimeOffset now, DateTimeOffset? heartbeat)
+    {
+        var phase = Phase(market, now);
+        if (phase == SessionPhase.PreOpen) return MinutesUntilOpen(market, now) <= 30;
+        if (phase != SessionPhase.Trading) return false;
+
+        int since = MinutesSinceSessionStart(market, now);
+        return (since is >= 0 and <= 15) || IsTrading(market, now, heartbeat);
+    }
+
     public static bool IsOpen(string market, DateTimeOffset now)
         => MinutesSinceSessionStart(market, now) >= 0;
+
+    /// <summary>Minutes until the 09:30 open; int.MaxValue on weekends.</summary>
+    public static int MinutesUntilOpen(string market, DateTimeOffset now)
+    {
+        var local = TimeZoneInfo.ConvertTime(now, Zone(market));
+        if (local.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) return int.MaxValue;
+
+        int minutes = local.Hour * 60 + local.Minute;
+        return minutes < 570 ? 570 - minutes : 0;
+    }
 
     /// <summary>
     /// Open when the local session is running AND the benchmark quote is fresh.

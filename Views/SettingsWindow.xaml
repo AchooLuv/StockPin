@@ -1,4 +1,4 @@
-﻿<Window x:Class="StockPin.Views.SettingsWindow"
+<Window x:Class="StockPin.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="StockPin 设置"
@@ -388,7 +388,7 @@
                                          Tag="60" Checked="Interval_Checked" Margin="6,0,0,0" />
                         </StackPanel>
                         <TextBlock Style="{StaticResource Hint}"
-                                   Text="1 秒最灵敏；所有市场都收盘时会自动降到 60 秒刷新一次，面板隐藏时暂停轮询。" />
+                                   Text="1 秒最灵敏；只刷新正在交易的市场，收盘后不再请求该市场的股票，开盘前 30 分钟自动恢复；全部休市时降为 60 秒心跳。" />
 
                         <TextBlock Style="{StaticResource SectionTitle}" Text="面板" />
                         <CheckBox Style="{StaticResource SwitchCheck}" Content="固定面板位置"

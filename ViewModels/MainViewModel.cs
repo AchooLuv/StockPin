@@ -14,6 +14,13 @@ public sealed class MainViewModel : ObservableObject
     private int _intervalSec;
     private bool _showCode;
 
+    private readonly Dictionary<string, DateTimeOffset> _heartbeats = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, bool> _prevActive = new(StringComparer.Ordinal);
+    private bool _forceAll = true;
+    private bool _anyTrading;
+    private bool _anyWarmup;
+    private bool _anyLunch;
+
     private double _usdRate = 7.10;
     private double _hkdRate = 0.92;
 
@@ -107,6 +114,7 @@ public sealed class MainViewModel : ObservableObject
         Persist();
         RecalcPortfolio();
         UpdateTimerInterval();
+        _forceAll = true;
         _ = RefreshAsync();
         return true;
     }
@@ -142,7 +150,11 @@ public sealed class MainViewModel : ObservableObject
         Persist();
     }
 
-    public Task RefreshNowAsync() => RefreshAsync();
+    public Task RefreshNowAsync()
+    {
+        _forceAll = true;
+        return RefreshAsync();
+    }
 
     /// <summary>Design-preview data used by <c>--demo</c> / <c>--screenshot</c>.</summary>
     public void ApplyDemoData()
@@ -192,6 +204,8 @@ public sealed class MainViewModel : ObservableObject
         if (_busy) return;
         if (Stocks.Count == 0)
         {
+            _anyTrading = _anyWarmup = _anyLunch = false;
+            UpdateTimerInterval();
             RecalcPortfolio();
             return;
         }
@@ -199,13 +213,48 @@ public sealed class MainViewModel : ObservableObject
         _busy = true;
         try
         {
-            var ids = Stocks.Select(s => s.SecId).ToList();
+            var now = DateTimeOffset.Now;
             var markets = Stocks.Select(s => s.Market).Distinct().ToList();
-            var probes = markets.Select(MarketClock.ProbeSecId)
-                .Where(p => !ids.Contains(p, StringComparer.Ordinal))
+            var phases = new Dictionary<string, SessionPhase>(StringComparer.Ordinal);
+            var active = new Dictionary<string, bool>(StringComparer.Ordinal);
+            var warmup = new Dictionary<string, bool>(StringComparer.Ordinal);
+
+            foreach (var market in markets)
+            {
+                var phase = MarketClock.Phase(market, now);
+                phases[market] = phase;
+
+                bool isActive = MarketClock.ShouldPoll(market, now,
+                    _heartbeats.TryGetValue(market, out var hb) ? hb : null);
+                bool isWarmup = isActive && phase == SessionPhase.PreOpen;
+
+                active[market] = isActive;
+                warmup[market] = isWarmup;
+            }
+
+            _anyTrading = markets.Any(m => active[m] && !warmup[m]);
+            _anyWarmup = markets.Any(m => warmup[m]);
+            _anyLunch = markets.Any(m => phases[m] == SessionPhase.Lunch);
+
+            bool force = _forceAll;
+            _forceAll = false;
+
+            // Closed markets are skipped, except for one final refresh at the close transition.
+            var fetchSet = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var market in markets)
+            {
+                bool wasActive = _prevActive.TryGetValue(market, out var prev) && prev;
+                if (force || active[market] || wasActive) fetchSet.Add(market);
+            }
+
+            var stockIds = Stocks.Where(s => fetchSet.Contains(s.Market)).Select(s => s.SecId).ToList();
+            var probeIds = markets.Select(MarketClock.ProbeSecId)
+                .Where(p => !stockIds.Contains(p, StringComparer.Ordinal))
                 .ToList();
 
-            var quotes = await _quotes.FetchQuotesAsync(ids.Concat(probes), CancellationToken.None)
+            // Benchmarks are fetched on every tick, even when idle, so openings and holidays
+            // are noticed quickly without polling every closed stock.
+            var quotes = await _quotes.FetchQuotesAsync(stockIds.Concat(probeIds), CancellationToken.None)
                 .ConfigureAwait(true);
 
             if (quotes.Count == 0)
@@ -214,40 +263,47 @@ public sealed class MainViewModel : ObservableObject
                 return;
             }
 
-            // Benchmark timestamps tell a real session from a holiday.
-            var heartbeat = new Dictionary<string, DateTimeOffset>(StringComparer.Ordinal);
             foreach (var market in markets)
             {
                 if (quotes.TryGetValue(MarketClock.ProbeSecId(market), out var probe) && probe.HasData)
-                    heartbeat[market] = probe.UpdatedAt;
+                    _heartbeats[market] = probe.UpdatedAt;
             }
 
-            if (Stocks.Any(s => s.Qty > 0 && s.Market != MarketKind.A))
+            if (fetchSet.Count > 0 && Stocks.Any(s => s.Qty > 0 && s.Market != MarketKind.A))
             {
                 var (usd, hkd) = await _quotes.FetchRatesAsync(CancellationToken.None).ConfigureAwait(true);
                 if (usd > 0) _usdRate = usd;
                 if (hkd > 0) _hkdRate = hkd;
             }
 
-            var now = DateTimeOffset.Now;
             bool namesChanged = false;
 
             foreach (var entry in Stocks)
             {
-                DateTimeOffset? hb = heartbeat.TryGetValue(entry.Market, out var stamp) ? stamp : null;
+                DateTimeOffset? hb = _heartbeats.TryGetValue(entry.Market, out var stamp) ? stamp : null;
                 bool trading = MarketClock.IsTrading(entry.Market, now, hb);
-                string session = MarketClock.StatusText(MarketClock.Phase(entry.Market, now), trading);
+                string session = MarketClock.StatusText(phases[entry.Market], trading);
 
-                if (quotes.TryGetValue(entry.SecId, out var quote))
+                if (fetchSet.Contains(entry.Market))
                 {
-                    if (!string.IsNullOrWhiteSpace(quote.Name) && quote.Name != entry.Name) namesChanged = true;
-                    entry.ApplyQuote(quote, trading, session);
+                    if (quotes.TryGetValue(entry.SecId, out var quote))
+                    {
+                        if (!string.IsNullOrWhiteSpace(quote.Name) && quote.Name != entry.Name) namesChanged = true;
+                        entry.ApplyQuote(quote, trading, session);
+                    }
+                    else
+                    {
+                        entry.MarkClosed(session);
+                    }
                 }
                 else
                 {
-                    entry.MarkClosed(session);
+                    // Market is closed: keep the last price, only update the session label.
+                    entry.SetSession(trading, session);
                 }
             }
+
+            foreach (var market in markets) _prevActive[market] = active[market];
 
             if (namesChanged) Persist();
 
@@ -269,9 +325,13 @@ public sealed class MainViewModel : ObservableObject
 
     private void UpdateTimerInterval()
     {
-        // When every market is closed there is nothing to poll for; save CPU/battery.
-        bool anyOpen = Stocks.Any(s => s.IsOpen);
-        int seconds = anyOpen ? Math.Max(1, _intervalSec) : Math.Max(60, _intervalSec);
+        // Trading markets: user interval. Pre-open warm-up: 10s. Lunch: 30s. Otherwise idle at 60s.
+        int seconds;
+        if (_anyTrading) seconds = Math.Max(1, _intervalSec);
+        else if (_anyWarmup) seconds = Math.Max(10, _intervalSec);
+        else if (_anyLunch) seconds = 30;
+        else seconds = 60;
+
         var interval = TimeSpan.FromSeconds(seconds);
         if (_timer.Interval != interval) _timer.Interval = interval;
         if (!_paused && !_timer.IsEnabled && Stocks.Count > 0) _timer.Start();

@@ -201,6 +201,17 @@ public sealed class StockEntry : ObservableObject
         OnPropertyChanged(string.Empty);
     }
 
+    /// <summary>Updates only the session state; used when a market is not being polled.</summary>
+    public void SetSession(bool isOpen, string sessionText)
+    {
+        if (_isOpen == isOpen && _sessionText == sessionText) return;
+        _isOpen = isOpen;
+        _sessionText = sessionText;
+        OnPropertyChanged(nameof(IsOpen));
+        OnPropertyChanged(nameof(SessionText));
+        OnPropertyChanged(nameof(HasSessionText));
+    }
+
     private static string Format(double value, int decimals)
         => value.ToString("N" + decimals, CultureInfo.InvariantCulture);
 }
