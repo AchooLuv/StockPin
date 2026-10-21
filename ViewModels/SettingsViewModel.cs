@@ -106,5 +106,17 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>Re-reads the config so changes made on the panel (e.g. the pin) show up here too.</summary>
+    public void RefreshFromConfig()
+    {
+        OnPropertyChanged(nameof(ThemeIndex));
+        OnPropertyChanged(nameof(ShowCode));
+        OnPropertyChanged(nameof(AutoStart));
+        OnPropertyChanged(nameof(IntervalSec));
+        OnPropertyChanged(nameof(BackdropPercent));
+        OnPropertyChanged(nameof(BackdropLabel));
+        OnPropertyChanged(nameof(Locked));
+    }
+
     private void Raise() => Changed?.Invoke();
 }

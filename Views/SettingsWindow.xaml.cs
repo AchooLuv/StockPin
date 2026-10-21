@@ -82,6 +82,18 @@ public partial class SettingsWindow : Window
         }
     }
 
+    /// <summary>Used when the panel changes shared state (pin, theme) while this window is open.</summary>
+    public void RefreshFromConfig()
+    {
+        _vm.RefreshFromConfig();
+
+        foreach (var radio in IntervalPanel.Children.OfType<RadioButton>())
+        {
+            bool should = string.Equals(radio.Tag as string, _vm.IntervalSec.ToString(), StringComparison.Ordinal);
+            if (radio.IsChecked != should) radio.IsChecked = should;
+        }
+    }
+
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
     /// <summary>Used by the design-preview screenshot mode.</summary>

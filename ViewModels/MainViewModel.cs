@@ -294,7 +294,8 @@ public sealed class MainViewModel : ObservableObject
 
         foreach (var s in Stocks)
         {
-            if (s.Qty <= 0) continue;
+            // A holding only counts when both quantity and cost are filled in.
+            if (s.Qty <= 0 || s.Cost <= 0) continue;
             any = true;
             if (!s.HasQuote) continue;
 
@@ -306,8 +307,7 @@ public sealed class MainViewModel : ObservableObject
             };
 
             marketValue += s.Qty * s.Price * fx;
-            // A missing cost price contributes zero profit instead of the full market value.
-            costValue += s.Qty * (s.Cost > 0 ? s.Cost : s.Price) * fx;
+            costValue += s.Qty * s.Cost * fx;
             todayPl += s.Qty * (s.Price - s.PrevClose) * fx;
         }
 

@@ -24,6 +24,8 @@ public sealed class StockEntry : ObservableObject
     private int _qty;
     private double _cost;
     private string _sessionText = "";
+    private string _qtyText = "";
+    private string _costText = "";
 
     public StockEntry(string secId, string code, string name, string market, int qty = 0, double cost = 0)
     {
@@ -33,6 +35,8 @@ public sealed class StockEntry : ObservableObject
         _name = name;
         _qty = qty;
         _cost = cost;
+        _qtyText = qty > 0 ? qty.ToString(CultureInfo.InvariantCulture) : "";
+        _costText = cost > 0 ? cost.ToString("0.###", CultureInfo.InvariantCulture) : "";
     }
 
     public string SecId { get; }
@@ -72,78 +76,61 @@ public sealed class StockEntry : ObservableObject
         get => _qty;
         set
         {
-            if (Set(ref _qty, Math.Max(0, value)))
-            {
-                OnPropertyChanged(nameof(QtyText));
-                OnPropertyChanged(nameof(HasPosition));
-            }
+            if (Set(ref _qty, Math.Max(0, value))) OnPropertyChanged(nameof(HasPosition));
         }
     }
 
     public double Cost
     {
         get => _cost;
-        set
-        {
-            if (Set(ref _cost, Math.Max(0, value))) OnPropertyChanged(nameof(CostText));
-        }
+        set => Set(ref _cost, Math.Max(0, value));
     }
 
-    public bool HasPosition => _qty > 0;
+    public bool HasPosition => _qty > 0 && _cost > 0;
 
-    /// <summary>Text shown in the settings list; empty means "no position".</summary>
+    /// <summary>
+    /// Live-edited text. The raw string is kept so the caret never jumps, and the
+    /// numeric value is parsed on every keystroke so the panel updates immediately.
+    /// </summary>
     public string QtyText
     {
-        get => _qty == 0 ? "" : _qty.ToString(CultureInfo.InvariantCulture);
+        get => _qtyText;
         set
         {
-            var text = (value ?? "").Trim().Replace(",", "").Replace(" ", "");
-            if (text.Length == 0)
-            {
-                if (_qty != 0)
-                {
-                    _qty = 0;
-                    OnPropertyChanged(nameof(Qty));
-                    OnPropertyChanged(nameof(QtyText));
-                    OnPropertyChanged(nameof(HasPosition));
-                }
-                else
-                {
-                    OnPropertyChanged(nameof(QtyText));
-                }
-                return;
-            }
+            var text = value ?? "";
+            if (_qtyText == text) return;
+            _qtyText = text;
 
-            if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var qty) && qty >= 0)
+            var trimmed = text.Trim().Replace(",", "").Replace(" ", "");
+            if (trimmed.Length == 0)
             {
-                if (_qty != qty)
-                {
-                    _qty = qty;
-                    OnPropertyChanged(nameof(Qty));
-                    OnPropertyChanged(nameof(HasPosition));
-                }
+                Qty = 0;
             }
-
-            OnPropertyChanged(nameof(QtyText));
+            else if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var qty) && qty >= 0)
+            {
+                Qty = qty;
+            }
         }
     }
 
     public string CostText
     {
-        get => _cost <= 0 ? "" : _cost.ToString("0.###", CultureInfo.InvariantCulture);
+        get => _costText;
         set
         {
-            var text = (value ?? "").Trim().Replace(",", "").Replace(" ", "");
-            if (text.Length == 0)
+            var text = value ?? "";
+            if (_costText == text) return;
+            _costText = text;
+
+            var trimmed = text.Trim().Replace(",", "").Replace(" ", "");
+            if (trimmed.Length == 0)
             {
-                _cost = 0;
+                Cost = 0;
             }
-            else if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var cost) && cost >= 0)
+            else if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var cost) && cost >= 0)
             {
-                _cost = cost;
+                Cost = cost;
             }
-            OnPropertyChanged(nameof(Cost));
-            OnPropertyChanged(nameof(CostText));
         }
     }
 

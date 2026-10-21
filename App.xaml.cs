@@ -185,6 +185,9 @@ public partial class App : Application
             Panel.RefreshBackdrop();
         }
 
+        // Keep an open settings window in sync with changes made on the panel (e.g. the pin).
+        _settings?.RefreshFromConfig();
+
         if (PersistEnabled && !_demo && _appliedAutoStart != Config.AutoStart)
         {
             StartupService.Apply(Config.AutoStart);
