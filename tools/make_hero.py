@@ -1,16 +1,16 @@
-"""Compose the README hero image from rendered panel screenshots."""
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+﻿"""Compose the README hero image from rendered panel screenshots (text-only, transparent)."""
+from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
 
 W, H = 1280, 760
-BG_TOP = (18, 25, 48)
-BG_BOTTOM = (44, 60, 100)
+BG_TOP = (16, 22, 43)
+BG_BOTTOM = (43, 58, 96)
 
 
 def gradient(width, height, top, bottom):
     y = np.linspace(0.0, 1.0, height)[:, None]
     x = np.linspace(0.0, 1.0, width)[None, :]
-    t = np.clip(0.65 * y + 0.35 * x, 0, 1) ** 0.9
+    t = np.clip(0.62 * y + 0.38 * x, 0, 1) ** 0.9
     arr = np.zeros((height, width, 3), dtype=np.float32)
     for i in range(3):
         arr[:, :, i] = top[i] + (bottom[i] - top[i]) * t
@@ -19,43 +19,33 @@ def gradient(width, height, top, bottom):
 
 canvas = gradient(W, H, BG_TOP, BG_BOTTOM)
 
-# soft colour glows
+# soft colour glows behind each panel
 glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 gd = ImageDraw.Draw(glow)
-gd.ellipse([-260, -320, 720, 460], fill=(109, 140, 155, 60))
-gd.ellipse([720, 380, 1500, 1160], fill=(120, 143, 178, 55))
-glow = glow.filter(ImageFilter.GaussianBlur(160))
+gd.ellipse([-120, 20, 720, 560], fill=(80, 112, 190, 55))
+gd.ellipse([560, 150, 1420, 820], fill=(140, 108, 175, 45))
+glow = glow.filter(ImageFilter.GaussianBlur(150))
 canvas = Image.alpha_composite(canvas, glow)
 
-# subtle vignette
+# gentle vignette
 vignette = Image.new("L", (W, H), 0)
 vd = ImageDraw.Draw(vignette)
-vd.ellipse([-260, -220, W + 260, H + 220], fill=255)
-vignette = vignette.filter(ImageFilter.GaussianBlur(180))
-dark = Image.new("RGBA", (W, H), (4, 7, 16, 90))
+vd.ellipse([-280, -240, W + 280, H + 240], fill=255)
+vignette = vignette.filter(ImageFilter.GaussianBlur(170))
+dark = Image.new("RGBA", (W, H), (4, 7, 16, 80))
 canvas = Image.composite(canvas, Image.alpha_composite(canvas, dark), vignette)
 
 
-def shadowed(panel, scale, alpha=150, blur=34, offset=(0, 20)):
-    img = panel.resize((int(panel.width * scale), int(panel.height * scale)), Image.LANCZOS)
-    mask = img.getchannel("A").point(lambda v: int(v * 0.9))
-    sh = Image.new("RGBA", (img.width + 160, img.height + 160), (0, 0, 0, 0))
-    sh.paste(Image.new("RGBA", img.size, (5, 8, 18, alpha)), (80, 80), mask)
-    sh = sh.filter(ImageFilter.GaussianBlur(blur))
-    sh.paste(img, (80 + offset[0], 80 + offset[1]), img)
-    return sh, (80 + offset[0], 80 + offset[1])
+def scaled(path, scale):
+    img = Image.open(path).convert("RGBA")
+    return img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
 
 
-light = Image.open("out/panel0.png")
-dark = Image.open("out/panel1.png")
+blue = scaled("out/panel1.png", 0.85)
+purple = scaled("out/panel3.png", 0.85)
 
-light_layer, light_at = shadowed(light, 0.82, alpha=165)
-dark_layer, dark_at = shadowed(dark, 0.82, alpha=175)
-
-canvas.alpha_composite(dark_layer, (664 - 80, 96 - 80))
-canvas.alpha_composite(light_layer, (72 - 80, 196 - 80))
-
-draw = ImageDraw.Draw(canvas)
+canvas.alpha_composite(purple, (655, 320))
+canvas.alpha_composite(blue, (35, 115))
 
 import os
 os.makedirs("docs", exist_ok=True)

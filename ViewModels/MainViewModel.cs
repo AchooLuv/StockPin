@@ -22,6 +22,7 @@ public sealed class MainViewModel : ObservableObject
     private string _totalPlText = "—";
     private string _todayPlText = "—";
     private string _todayPctText = "—";
+    private string _totalPlPctText = "";
     private string _totalPlDirection = "Flat";
     private string _todayPctDirection = "Flat";
     private string _fxTooltip = "";
@@ -70,6 +71,7 @@ public sealed class MainViewModel : ObservableObject
     public string TotalPlText { get => _totalPlText; private set => Set(ref _totalPlText, value); }
     public string TodayPlText { get => _todayPlText; private set => Set(ref _todayPlText, value); }
     public string TodayPctText { get => _todayPctText; private set => Set(ref _todayPctText, value); }
+    public string TotalPlPctText { get => _totalPlPctText; private set => Set(ref _totalPlPctText, value); }
     public string TotalPlDirection { get => _totalPlDirection; private set => Set(ref _totalPlDirection, value); }
     public string TodayPctDirection { get => _todayPctDirection; private set => Set(ref _todayPctDirection, value); }
     public string FxTooltip { get => _fxTooltip; private set => Set(ref _fxTooltip, value); }
@@ -159,8 +161,9 @@ public sealed class MainViewModel : ObservableObject
         {
             if (!samples.TryGetValue(entry.SecId, out var s)) continue;
             double pct = s.Prev > 0 ? (s.Price - s.Prev) / s.Prev * 100 : 0;
+            string session = MarketClock.StatusText(MarketClock.Phase(entry.Market, now), false);
             entry.ApplyQuote(new Quote(entry.SecId, entry.Code, entry.Name, s.Price, s.Prev, pct,
-                s.Price - s.Prev, s.Open, s.High, s.Low, now, true), true);
+                s.Price - s.Prev, s.Open, s.High, s.Low, now, true), false, session);
         }
 
         RecalcPortfolio();
@@ -232,15 +235,17 @@ public sealed class MainViewModel : ObservableObject
             foreach (var entry in Stocks)
             {
                 DateTimeOffset? hb = heartbeat.TryGetValue(entry.Market, out var stamp) ? stamp : null;
-                bool open = MarketClock.IsTrading(entry.Market, now, hb);
+                bool trading = MarketClock.IsTrading(entry.Market, now, hb);
+                string session = MarketClock.StatusText(MarketClock.Phase(entry.Market, now), trading);
+
                 if (quotes.TryGetValue(entry.SecId, out var quote))
                 {
                     if (!string.IsNullOrWhiteSpace(quote.Name) && quote.Name != entry.Name) namesChanged = true;
-                    entry.ApplyQuote(quote, open);
+                    entry.ApplyQuote(quote, trading, session);
                 }
                 else
                 {
-                    entry.MarkClosed();
+                    entry.MarkClosed(session);
                 }
             }
 
@@ -266,7 +271,7 @@ public sealed class MainViewModel : ObservableObject
     {
         // When every market is closed there is nothing to poll for; save CPU/battery.
         bool anyOpen = Stocks.Any(s => s.IsOpen);
-        int seconds = anyOpen ? Math.Max(3, _intervalSec) : Math.Max(60, _intervalSec);
+        int seconds = anyOpen ? Math.Max(1, _intervalSec) : Math.Max(60, _intervalSec);
         var interval = TimeSpan.FromSeconds(seconds);
         if (_timer.Interval != interval) _timer.Interval = interval;
         if (!_paused && !_timer.IsEnabled && Stocks.Count > 0) _timer.Start();
@@ -317,15 +322,20 @@ public sealed class MainViewModel : ObservableObject
         double totalPl = marketValue - costValue;
         double todayBase = marketValue - todayPl;
         double todayPct = todayBase > 0 ? todayPl / todayBase * 100 : 0;
+        double totalPct = costValue > 0 ? totalPl / costValue * 100 : 0;
 
         PortfolioValueText = Money(marketValue);
         TotalPlText = SignedMoney(totalPl);
         TodayPlText = SignedMoney(todayPl);
-        TodayPctText = (todayPct > 0 ? "+" : "") + todayPct.ToString("F2", CultureInfo.InvariantCulture) + "%";
+        TodayPctText = "(" + SignedPct(todayPct) + ")";
+        TotalPlPctText = "(" + SignedPct(totalPct) + ")";
         TotalPlDirection = Dir(totalPl).ToString();
         TodayPctDirection = Dir(todayPl).ToString();
         FxTooltip = $"按实时汇率折算人民币\nUSD/CNH {_usdRate:F4}   HKD/CNH {_hkdRate:F4}";
     }
+
+    private static string SignedPct(double pct)
+        => (pct > 0 ? "+" : "") + pct.ToString("F2", CultureInfo.InvariantCulture) + "%";
 
     private static PriceDirection Dir(double value) =>
         value > 0.005 ? PriceDirection.Up : value < -0.005 ? PriceDirection.Down : PriceDirection.Flat;

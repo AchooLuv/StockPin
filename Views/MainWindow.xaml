@@ -30,184 +30,186 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="PanelIconButton" TargetType="Button">
+            <Setter Property="Width" Value="23" />
+            <Setter Property="Height" Value="23" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Border x:Name="Root" CornerRadius="16" Background="{DynamicResource PanelBg}"
-            BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Padding="0,0,0,6">
-        <Grid>
+    <!-- No card, no border: only the text is painted.
+         The 1/255 alpha backdrop is invisible but makes the whole panel draggable
+         (a fully transparent layered window is click-through per pixel). -->
+    <Border x:Name="Root" Background="#01000000"
+            Padding="0,2,0,4" MouseLeftButtonDown="Root_MouseLeftButtonDown"
+            MouseMove="Root_MouseMove" MouseLeftButtonUp="Root_MouseLeftButtonUp"
+            LostMouseCapture="Root_LostMouseCapture">
+        <Grid Effect="{DynamicResource TextShadow}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="36" />
+                <RowDefinition Height="34" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- ================= header (drag handle) ================= -->
-            <Grid x:Name="Header" Grid.Row="0" Background="Transparent"
-                  MouseLeftButtonDown="Header_MouseLeftButtonDown">
-                <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
-                    <Ellipse Width="6" Height="6" Fill="{DynamicResource Accent}" VerticalAlignment="Center" />
-                    <TextBlock Text="STOCKPIN" Margin="7,0,0,0" FontSize="10" FontWeight="SemiBold"
+            <!-- ================= header: title + quick actions ================= -->
+            <Grid x:Name="Header" Grid.Row="0" Background="Transparent">
+                <StackPanel Orientation="Horizontal" Margin="11,0,0,0" VerticalAlignment="Center">
+                    <Ellipse Width="5" Height="5" Fill="{DynamicResource Accent}" VerticalAlignment="Center" />
+                    <TextBlock Text="STOCKPIN" Margin="6,0,0,0" FontSize="9.5" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" />
-                    <TextBlock x:Name="LockGlyph" Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="9"
-                               Foreground="{DynamicResource TextMuted}" Margin="6,0,0,0"
-                               VerticalAlignment="Center" Visibility="Collapsed" ToolTip="面板位置已锁定" />
                 </StackPanel>
 
                 <StackPanel x:Name="HeaderButtons" Orientation="Horizontal" HorizontalAlignment="Right"
-                            Margin="0,0,4,0" VerticalAlignment="Center">
-                    <StackPanel.Style>
-                        <Style TargetType="StackPanel">
-                            <Setter Property="Opacity" Value="0.45" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Window}}"
-                                             Value="True">
-                                    <Setter Property="Opacity" Value="1" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </StackPanel.Style>
-
-                    <Button Style="{StaticResource IconButton}" Click="Refresh_Click" ToolTip="立即刷新">
-                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
+                            Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Button x:Name="LockButton" Style="{StaticResource PanelIconButton}"
+                            Click="Lock_Click" ToolTip="锁定面板位置">
+                        <TextBlock x:Name="LockGlyph" Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Click="Add_Click" ToolTip="添加股票">
-                        <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
+                    <Button Style="{StaticResource PanelIconButton}" Click="Refresh_Click" ToolTip="立即刷新">
+                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Click="Settings_Click" ToolTip="设置">
-                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
+                    <Button Style="{StaticResource PanelIconButton}" Click="Add_Click" ToolTip="添加股票">
+                        <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Click="Hide_Click" ToolTip="隐藏到托盘">
-                        <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
+                    <Button Style="{StaticResource PanelIconButton}" Click="Settings_Click" ToolTip="设置">
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
+                    </Button>
+                    <Button Style="{StaticResource PanelIconButton}" Click="Hide_Click" ToolTip="隐藏到托盘">
+                        <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="9" />
                     </Button>
                 </StackPanel>
             </Grid>
 
-            <!-- ================= simulated portfolio ================= -->
-            <Border Grid.Row="1" x:Name="PortfolioBox" Margin="8,2,8,6" CornerRadius="10"
-                    Background="{DynamicResource Surface}" Padding="10,8" ToolTip="{Binding FxTooltip}"
-                    Visibility="{Binding HasPortfolio, Converter={StaticResource BoolToVis}}">
+            <!-- ================= compact simulated portfolio ================= -->
+            <StackPanel Grid.Row="1" Margin="11,4,11,5" ToolTip="{Binding FxTooltip}"
+                        Visibility="{Binding HasPortfolio, Converter={StaticResource BoolToVis}}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Grid.Column="0">
-                        <TextBlock Text="持仓市值" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
-                        <TextBlock Text="{Binding PortfolioValueText}" FontSize="14" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimary}" Margin="0,1,0,0"
-                                   TextTrimming="CharacterEllipsis" />
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="持仓" FontSize="9" Foreground="{DynamicResource TextMuted}"
+                                   VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding PortfolioValueText}" FontSize="11.5" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0,0,0">
-                        <TextBlock Text="总盈亏" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="总盈亏" FontSize="9" Foreground="{DynamicResource TextMuted}"
+                                   VerticalAlignment="Center" Margin="0,0,4,0" />
                         <TextBlock Text="{Binding TotalPlText}" Tag="{Binding TotalPlDirection}"
-                                   Style="{StaticResource DirectionText}" FontSize="14" FontWeight="SemiBold"
-                                   Margin="0,1,0,0" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,6,0,0">
-                        <TextBlock Text="今日盈亏" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
-                        <TextBlock Text="{Binding TodayPlText}" Tag="{Binding TodayPctDirection}"
-                                   Style="{StaticResource DirectionText}" FontSize="14" FontWeight="SemiBold"
-                                   Margin="0,1,0,0" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,6,0,0">
-                        <TextBlock Text="今日涨跌幅" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
-                        <TextBlock Text="{Binding TodayPctText}" Tag="{Binding TodayPctDirection}"
-                                   Style="{StaticResource DirectionText}" FontSize="14" FontWeight="SemiBold"
-                                   Margin="0,1,0,0" TextTrimming="CharacterEllipsis" />
+                                   Style="{StaticResource DirectionText}" FontSize="11.5" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding TotalPlPctText}" Tag="{Binding TotalPlDirection}"
+                                   Style="{StaticResource DirectionText}" FontSize="9" Margin="4,1,0,0"
+                                   VerticalAlignment="Center" />
                     </StackPanel>
                 </Grid>
-            </Border>
+
+                <StackPanel Orientation="Horizontal" Margin="0,2,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="今日" FontSize="9" Foreground="{DynamicResource TextMuted}"
+                               VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <TextBlock Text="{Binding TodayPlText}" Tag="{Binding TodayPctDirection}"
+                               Style="{StaticResource DirectionText}" FontSize="11.5" FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding TodayPctText}" Tag="{Binding TodayPctDirection}"
+                               Style="{StaticResource DirectionText}" FontSize="9" Margin="4,1,0,0"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
 
             <!-- ================= watch list ================= -->
             <Grid Grid.Row="2">
                 <ScrollViewer x:Name="StockScroll" VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled" MaxHeight="420" Margin="0,0,0,2">
-                    <ItemsControl ItemsSource="{Binding Stocks}" Margin="6,0,6,0">
+                              HorizontalScrollBarVisibility="Disabled" MaxHeight="420">
+                    <ItemsControl ItemsSource="{Binding Stocks}" Margin="7,0,7,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border x:Name="Row" CornerRadius="8" Padding="7,0" Height="28"
-                                        Background="Transparent" ToolTip="{Binding DetailText}"
-                                        MouseRightButtonDown="StockRow_RightButtonDown">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Opacity" Value="1" />
-                                            <Style.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="{DynamicResource RowHover}" />
-                                                </Trigger>
-                                                <DataTrigger Binding="{Binding IsOpen}" Value="False">
-                                                    <Setter Property="Opacity" Value="0.45" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
+                                <Grid Height="26" Background="Transparent" ToolTip="{Binding DetailText}"
+                                      MouseRightButtonDown="StockRow_RightButtonDown">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="14" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
 
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="20" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding TagText}" FontSize="9"
+                                               Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" />
 
-                                        <Border Width="16" Height="16" CornerRadius="4"
-                                                Background="{DynamicResource ChipBg}" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding TagText}" FontSize="9"
-                                                       Foreground="{DynamicResource ChipText}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                VerticalAlignment="Center" Margin="5,0,6,0">
+                                        <TextBlock Text="{Binding DisplayName}" FontSize="12"
+                                                   Foreground="{DynamicResource TextPrimary}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="100"
+                                                   VerticalAlignment="Center" />
 
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                                    VerticalAlignment="Center" Margin="6,0,4,0">
-                                            <TextBlock Text="{Binding DisplayName}" FontSize="12.5"
-                                                       Foreground="{DynamicResource TextPrimary}"
-                                                       TextTrimming="CharacterEllipsis" MaxWidth="132" />
-                                            <TextBlock Text="{Binding Code}" FontSize="9.5"
-                                                       Foreground="{DynamicResource TextMuted}" Margin="5,1,0,0"
-                                                       VerticalAlignment="Center"
-                                                       Visibility="{Binding DataContext.ShowCode,
-                                                           RelativeSource={RelativeSource AncestorType=Window},
-                                                           Converter={StaticResource BoolToVis}}" />
-                                        </StackPanel>
+                                        <TextBlock Text="{Binding SessionText}" FontSize="9"
+                                                   Foreground="{DynamicResource TextMuted}" Margin="4,1,0,0"
+                                                   VerticalAlignment="Center"
+                                                   Visibility="{Binding HasSessionText, Converter={StaticResource BoolToVis}}" />
 
-                                        <TextBlock Grid.Column="2" Text="{Binding PriceText}" FontSize="12.5"
-                                                   FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
-                                                   HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                   TextAlignment="Right" MinWidth="60" Margin="0,0,8,0" />
+                                        <TextBlock Text="{Binding Code}" FontSize="9"
+                                                   Foreground="{DynamicResource TextMuted}" Margin="4,1,0,0"
+                                                   VerticalAlignment="Center"
+                                                   Visibility="{Binding DataContext.ShowCode,
+                                                       RelativeSource={RelativeSource AncestorType=Window},
+                                                       Converter={StaticResource BoolToVis}}" />
+                                    </StackPanel>
 
-                                        <TextBlock Grid.Column="3" Text="{Binding ChangePctText}"
-                                                   Tag="{Binding DirectionText}" Style="{StaticResource DirectionText}"
-                                                   FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"
-                                                   VerticalAlignment="Center" TextAlignment="Right" MinWidth="54" />
-                                    </Grid>
-                                </Border>
+                                    <TextBlock Grid.Column="2" Text="{Binding PriceText}" FontSize="12"
+                                               FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                                               HorizontalAlignment="Right" VerticalAlignment="Center"
+                                               TextAlignment="Right" MinWidth="58" Margin="0,0,7,0" />
+
+                                    <TextBlock Grid.Column="3" Text="{Binding ChangePctText}"
+                                               Tag="{Binding DirectionText}" Style="{StaticResource DirectionText}"
+                                               FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Right"
+                                               VerticalAlignment="Center" TextAlignment="Right" MinWidth="50" />
+                                </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
 
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,22,0,26"
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,20,0,24"
                             Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="自选列表还是空的" FontSize="11.5"
-                               Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center" />
+                    <TextBlock Text="自选列表还是空的" FontSize="11" Foreground="{DynamicResource TextMuted}"
+                               HorizontalAlignment="Center" />
                     <Button Content="＋ 添加股票" Style="{StaticResource PrimaryButton}" Height="30"
                             Width="112" Margin="0,10,0,0" Click="Add_Click" />
                 </StackPanel>
             </Grid>
 
             <!-- ================= status line ================= -->
-            <Border Grid.Row="3" Margin="12,2,12,0"
+            <Border Grid.Row="3" Margin="11,2,11,0"
                     Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
-                <TextBlock Text="{Binding StatusText}" FontSize="10"
+                <TextBlock Text="{Binding StatusText}" FontSize="9.5"
                            Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis" />
             </Border>
         </Grid>

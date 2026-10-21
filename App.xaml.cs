@@ -1,4 +1,4 @@
-﻿namespace StockPin;
+namespace StockPin;
 
 using System.Windows.Media.Imaging;
 
@@ -180,7 +180,6 @@ public partial class App : Application
 
         if (Panel != null)
         {
-            Panel.Opacity = Config.Opacity;
             Panel.Topmost = Config.TopMost;
             Panel.RefreshLockState();
         }

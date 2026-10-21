@@ -1,4 +1,4 @@
-namespace StockPin.Views;
+﻿namespace StockPin.Views;
 
 using System.Windows.Interop;
 
@@ -17,7 +17,6 @@ public partial class MainWindow : Window
         _config = config;
         DataContext = vm;
 
-        Opacity = Math.Clamp(config.Opacity, 0.55, 1.0);
         Topmost = config.TopMost;
 
         Loaded += OnLoaded;
@@ -60,8 +59,12 @@ public partial class MainWindow : Window
 
     public void RefreshLockState()
     {
-        Header.Cursor = _config.Locked ? Cursors.Arrow : Cursors.SizeAll;
-        LockGlyph.Visibility = _config.Locked ? Visibility.Visible : Visibility.Collapsed;
+        var accent = TryFindResource("Accent") as Brush ?? Brushes.White;
+        var muted = TryFindResource("TextMuted") as Brush ?? Brushes.Gray;
+
+        LockButton.ToolTip = _config.Locked ? "解锁面板位置" : "锁定面板位置";
+        LockGlyph.Foreground = _config.Locked ? accent : muted;
+        Root.Cursor = _config.Locked ? Cursors.Arrow : Cursors.SizeAll;
     }
 
     public void MoveToDefaultPosition()
@@ -80,25 +83,49 @@ public partial class MainWindow : Window
 
     // ------------------------------------------------------------------ window drag
 
-    private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ClickCount == 2)
-        {
-            ToggleLock();
-            return;
-        }
+    private bool _dragging;
+    private Point _dragStartPoint;
+    private double _dragStartLeft;
+    private double _dragStartTop;
 
+    private void Root_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
         if (_config.Locked) return;
         if (IsInsideButton(e.OriginalSource as DependencyObject)) return;
+        _dragging = true;
+        _dragStartPoint = e.GetPosition(this);
+        _dragStartLeft = Left;
+        _dragStartTop = Top;
+        CaptureMouse();
+        e.Handled = true;
+    }
 
-        try
+    private void Root_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_dragging) return;
+        if (e.LeftButton != MouseButtonState.Pressed)
         {
-            DragMove();
-        }
-        catch
-        {
+            EndDrag();
             return;
         }
+
+        var point = e.GetPosition(this);
+        Left = _dragStartLeft + (point.X - _dragStartPoint.X);
+        Top = _dragStartTop + (point.Y - _dragStartPoint.Y);
+    }
+
+    private void Root_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_dragging) return;
+        EndDrag();
+    }
+
+    private void Root_LostMouseCapture(object sender, MouseEventArgs e) => _dragging = false;
+
+    private void EndDrag()
+    {
+        _dragging = false;
+        if (IsMouseCaptured) ReleaseMouseCapture();
 
         SnapToEdges();
         ClampToScreen();
@@ -174,6 +201,8 @@ public partial class MainWindow : Window
     }
 
     // ------------------------------------------------------------------ header buttons
+
+    private void Lock_Click(object sender, RoutedEventArgs e) => ToggleLock();
 
     private async void Refresh_Click(object sender, RoutedEventArgs e)
     {

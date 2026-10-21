@@ -1,5 +1,14 @@
 namespace StockPin.Services;
 
+public enum SessionPhase
+{
+    PreOpen,
+    Trading,
+    Lunch,
+    PostClose,
+    OffDay
+}
+
 /// <summary>Local trading-session clock for A-shares, Hong Kong and US markets.</summary>
 public static class MarketClock
 {
@@ -13,6 +22,39 @@ public static class MarketClock
         MarketKind.HK => "100.HSI",
         MarketKind.US => "100.SPX",
         _ => "1.000001"
+    };
+
+    public static SessionPhase Phase(string market, DateTimeOffset now)
+    {
+        var local = TimeZoneInfo.ConvertTime(now, Zone(market));
+        if (local.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) return SessionPhase.OffDay;
+
+        int minutes = local.Hour * 60 + local.Minute;
+        return market switch
+        {
+            MarketKind.A => minutes < 570 ? SessionPhase.PreOpen
+                : minutes < 690 ? SessionPhase.Trading
+                : minutes < 780 ? SessionPhase.Lunch
+                : minutes < 900 ? SessionPhase.Trading
+                : SessionPhase.PostClose,
+            MarketKind.HK => minutes < 570 ? SessionPhase.PreOpen
+                : minutes < 720 ? SessionPhase.Trading
+                : minutes < 780 ? SessionPhase.Lunch
+                : minutes < 960 ? SessionPhase.Trading
+                : SessionPhase.PostClose,
+            _ => minutes < 570 ? SessionPhase.PreOpen
+                : minutes < 960 ? SessionPhase.Trading
+                : SessionPhase.PostClose
+        };
+    }
+
+    /// <summary>Short label shown after the stock name, empty while the market is live.</summary>
+    public static string StatusText(SessionPhase phase, bool trading) => trading ? "" : phase switch
+    {
+        SessionPhase.PreOpen => "未开盘",
+        SessionPhase.Lunch => "午间休市",
+        SessionPhase.PostClose => "已收盘",
+        _ => "休市"
     };
 
     public static bool IsOpen(string market, DateTimeOffset now)

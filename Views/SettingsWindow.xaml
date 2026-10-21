@@ -330,29 +330,14 @@
                         </ListBox>
 
                         <TextBlock Style="{StaticResource Hint}" Margin="2,2,0,0"
-                                   Text="主题只改变界面与面板的底色，涨跌颜色固定为红涨绿跌。" />
+                                   Text="主题只改变文字与强调色，面板本身完全透明，涨跌固定红涨绿跌。" />
 
                         <TextBlock Style="{StaticResource SectionTitle}" Text="面板" Margin="2,22,0,10" />
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="背景不透明度" FontSize="12.5" Foreground="{DynamicResource TextPrimary}"
-                                       VerticalAlignment="Center" />
-                            <Slider Grid.Column="1" x:Name="OpacitySlider" Style="{StaticResource SliderThin}"
-                                    Minimum="55" Maximum="100" Margin="18,0,18,0" VerticalAlignment="Center"
-                                    Value="{Binding OpacityPercent, Mode=TwoWay}" />
-                            <TextBlock Grid.Column="2" Text="{Binding OpacityLabel}" FontSize="12"
-                                       Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"
-                                       MinWidth="38" TextAlignment="Right" />
-                        </Grid>
-
                         <CheckBox Style="{StaticResource SwitchCheck}" Content="显示股票代码"
-                                  Margin="0,20,0,0" IsChecked="{Binding ShowCode, Mode=TwoWay}" />
-                        <TextBlock Style="{StaticResource Hint}" Text="在股票名称后面显示代码；关闭后面板会更简洁。" />
+                                  IsChecked="{Binding ShowCode, Mode=TwoWay}" />
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="在股票名称后面显示代码；关闭后面板更简洁。面板没有底板，只有文字，可直接拖到任意位置。" />
                     </StackPanel>
                 </ScrollViewer>
 
@@ -367,8 +352,12 @@
 
                         <TextBlock Style="{StaticResource SectionTitle}" Text="行情刷新" />
                         <StackPanel x:Name="IntervalPanel" Orientation="Horizontal">
+                            <RadioButton Style="{StaticResource PillRadio}" GroupName="Interval" Content="1 秒"
+                                         Tag="1" Checked="Interval_Checked" />
+                            <RadioButton Style="{StaticResource PillRadio}" GroupName="Interval" Content="2 秒"
+                                         Tag="2" Checked="Interval_Checked" Margin="6,0,0,0" />
                             <RadioButton Style="{StaticResource PillRadio}" GroupName="Interval" Content="3 秒"
-                                         Tag="3" Checked="Interval_Checked" />
+                                         Tag="3" Checked="Interval_Checked" Margin="6,0,0,0" />
                             <RadioButton Style="{StaticResource PillRadio}" GroupName="Interval" Content="5 秒"
                                          Tag="5" Checked="Interval_Checked" Margin="6,0,0,0" />
                             <RadioButton Style="{StaticResource PillRadio}" GroupName="Interval" Content="10 秒"
@@ -379,7 +368,7 @@
                                          Tag="60" Checked="Interval_Checked" Margin="6,0,0,0" />
                         </StackPanel>
                         <TextBlock Style="{StaticResource Hint}"
-                                   Text="所有市场都收盘时会自动降到 60 秒刷新一次，尽量少占 CPU；面板隐藏时暂停轮询。" />
+                                   Text="1 秒最灵敏；所有市场都收盘时会自动降到 60 秒刷新一次，面板隐藏时暂停轮询。" />
 
                         <TextBlock Style="{StaticResource SectionTitle}" Text="面板" />
                         <CheckBox Style="{StaticResource SwitchCheck}" Content="窗口置顶"
@@ -387,7 +376,7 @@
                         <CheckBox Style="{StaticResource SwitchCheck}" Content="锁定面板位置"
                                   Margin="0,14,0,0" IsChecked="{Binding Locked, Mode=TwoWay}" />
                         <TextBlock Style="{StaticResource Hint}"
-                                   Text="锁定后拖动面板不会移动，避免误触；面板拖动松手会自动贴边并记住位置。" />
+                                   Text="也可以直接点面板右上角的小锁；锁定后拖动不会移动，避免误触。" />
                         <Button Content="重置面板位置" Style="{StaticResource GhostButton}" Height="30"
                                 HorizontalAlignment="Left" Margin="0,12,0,0" Click="ResetPosition_Click" />
 

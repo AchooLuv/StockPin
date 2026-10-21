@@ -49,8 +49,7 @@ public sealed class AppConfig
 {
     public List<StockConfig> Stocks { get; set; } = new();
     public int Theme { get; set; }
-    public double Opacity { get; set; } = 0.96;
-    public int IntervalSec { get; set; } = 5;
+    public int IntervalSec { get; set; } = 3;
     public bool TopMost { get; set; } = true;
     public bool Locked { get; set; }
     public bool AutoStart { get; set; }

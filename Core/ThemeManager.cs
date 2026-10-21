@@ -1,4 +1,6 @@
-namespace StockPin.Core;
+﻿namespace StockPin.Core;
+
+using System.Windows.Media.Effects;
 
 /// <summary>Owns the four palettes and swaps them into the application resource dictionary.</summary>
 public static class ThemeManager
@@ -130,8 +132,6 @@ public static class ThemeManager
         var p = CurrentPalette;
         var d = new ResourceDictionary
         {
-            ["PanelBg"] = new LinearGradientBrush(
-                ThemePalette.Parse(p.BgTop), ThemePalette.Parse(p.BgBottom), new Point(0, 0), new Point(0.6, 1)),
             ["WindowBg"] = ThemePalette.Solid(p.WindowBg),
             ["CardBg"] = ThemePalette.Solid(p.CardBg),
             ["PanelBorder"] = ThemePalette.Solid(p.Border),
@@ -151,11 +151,9 @@ public static class ThemeManager
             ["Up"] = ThemePalette.Solid(p.Up),
             ["Down"] = ThemePalette.Solid(p.Down),
             ["Flat"] = ThemePalette.Solid(p.Flat),
-            ["OnAccent"] = ThemePalette.Solid(p.IsDark ? p.WindowBg : "#FFFFFFFF")
+            ["OnAccent"] = ThemePalette.Solid(p.IsDark ? p.WindowBg : "#FFFFFFFF"),
+            ["TextShadow"] = BuildShadow(p)
         };
-
-        var bg = (LinearGradientBrush)d["PanelBg"];
-        bg.Freeze();
 
         if (_themeDictionary != null)
         {
@@ -169,5 +167,20 @@ public static class ThemeManager
         }
 
         _themeDictionary = d;
+    }
+
+    /// <summary>Soft halo so text stays readable on any wallpaper (light text → dark halo, and vice versa).</summary>
+    private static DropShadowEffect BuildShadow(ThemePalette p)
+    {
+        var shadow = new DropShadowEffect
+        {
+            BlurRadius = 2.5,
+            ShadowDepth = 0,
+            Direction = 0,
+            Opacity = 0.8,
+            Color = p.IsDark ? Colors.Black : Colors.White
+        };
+        shadow.Freeze();
+        return shadow;
     }
 }

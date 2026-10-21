@@ -31,22 +31,6 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
-    public double OpacityPercent
-    {
-        get => Math.Round(_config.Opacity * 100);
-        set
-        {
-            double clamped = Math.Clamp(value, 55, 100);
-            if (Math.Abs(clamped - OpacityPercent) < 0.01) return;
-            _config.Opacity = clamped / 100.0;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(OpacityLabel));
-            Raise();
-        }
-    }
-
-    public string OpacityLabel => ((int)Math.Round(OpacityPercent)) + "%";
-
     public bool ShowCode
     {
         get => _config.ShowCode;
@@ -76,7 +60,7 @@ public sealed class SettingsViewModel : ObservableObject
         get => _config.IntervalSec;
         set
         {
-            int clamped = value is 3 or 5 or 10 or 30 or 60 ? value : 5;
+            int clamped = value is 1 or 2 or 3 or 5 or 10 or 30 or 60 ? value : 3;
             if (_config.IntervalSec == clamped) return;
             _config.IntervalSec = clamped;
             OnPropertyChanged();

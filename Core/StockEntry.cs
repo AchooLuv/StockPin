@@ -23,6 +23,7 @@ public sealed class StockEntry : ObservableObject
     private DateTimeOffset _updatedAt;
     private int _qty;
     private double _cost;
+    private string _sessionText = "";
 
     public StockEntry(string secId, string code, string name, string market, int qty = 0, double cost = 0)
     {
@@ -61,6 +62,10 @@ public sealed class StockEntry : ObservableObject
     public bool HasQuote { get => _hasQuote; private set => Set(ref _hasQuote, value); }
     public bool IsOpen { get => _isOpen; private set => Set(ref _isOpen, value); }
     public DateTimeOffset UpdatedAt { get => _updatedAt; private set => Set(ref _updatedAt, value); }
+
+    /// <summary>"未开盘" / "已收盘" / "午间休市" / "休市" shown after the name; empty while trading.</summary>
+    public string SessionText => _sessionText;
+    public bool HasSessionText => _sessionText.Length > 0;
 
     public int Qty
     {
@@ -184,7 +189,7 @@ public sealed class StockEntry : ObservableObject
     }
 
     /// <summary>Applies a fresh quote. Raises a blanket notification (cheap: ~10 rows).</summary>
-    public void ApplyQuote(Quote quote, bool isOpen)
+    public void ApplyQuote(Quote quote, bool isOpen, string sessionText)
     {
         if (!string.IsNullOrWhiteSpace(quote.Name)) _name = quote.Name;
         _price = quote.Price;
@@ -196,15 +201,17 @@ public sealed class StockEntry : ObservableObject
         _low = quote.Low;
         _hasQuote = quote.HasData;
         _updatedAt = quote.UpdatedAt;
-        _isOpen = isOpen && quote.HasData;
+        _isOpen = isOpen;
+        _sessionText = sessionText;
         OnPropertyChanged(string.Empty);
     }
 
-    public void MarkClosed()
+    /// <summary>Keeps the last price but refreshes the session label (market closed or no data).</summary>
+    public void MarkClosed(string sessionText)
     {
-        if (!_isOpen) return;
         _isOpen = false;
-        OnPropertyChanged(nameof(IsOpen));
+        _sessionText = sessionText;
+        OnPropertyChanged(string.Empty);
     }
 
     private static string Format(double value, int decimals)
