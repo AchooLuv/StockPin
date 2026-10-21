@@ -96,8 +96,8 @@
                             <TextBox x:Name="AddBox" Style="{StaticResource InputBox}" Height="36" FontSize="12.5"
                                      KeyDown="AddBox_KeyDown" TextChanged="AddBox_TextChanged" />
                             <TextBlock x:Name="AddPlaceholder"
-                                       Text="输入股票代码或名称，如 601872 / 00700 / FRO"
-                                       FontSize="12.5" Foreground="{DynamicResource TextMuted}" Opacity="0.7"
+                                       Text="输入代码或名称：A股 601872 · 港股 00700 · 美股 FRO"
+                                       FontSize="12.5" Foreground="{DynamicResource TextMuted}" Opacity="0.75"
                                        Margin="13,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" />
                         </Grid>
                         <Button Grid.Column="1" Content="添加" Style="{StaticResource PrimaryButton}"
@@ -330,14 +330,34 @@
                         </ListBox>
 
                         <TextBlock Style="{StaticResource Hint}" Margin="2,2,0,0"
-                                   Text="主题只改变文字与强调色，面板本身完全透明，涨跌固定红涨绿跌。" />
+                                   Text="主题只改变面板的底色与文字配色，涨跌固定红涨绿跌。" />
 
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="面板" Margin="2,22,0,10" />
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="面板背景" Margin="2,22,0,10" />
 
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="背景强度" FontSize="12.5" Foreground="{DynamicResource TextPrimary}"
+                                       VerticalAlignment="Center" />
+                            <Slider Grid.Column="1" Style="{StaticResource SliderThin}"
+                                    Minimum="0" Maximum="100" SmallChange="5" LargeChange="10"
+                                    Margin="18,0,18,0" VerticalAlignment="Center"
+                                    Value="{Binding BackdropPercent, Mode=TwoWay}" />
+                            <TextBlock Grid.Column="2" Text="{Binding BackdropLabel}" FontSize="12"
+                                       Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"
+                                       MinWidth="38" TextAlignment="Right" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="0% 为纯文字、完全透明；玩游戏或壁纸很花时建议 60% 以上，文字更清晰。" />
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="显示" />
                         <CheckBox Style="{StaticResource SwitchCheck}" Content="显示股票代码"
                                   IsChecked="{Binding ShowCode, Mode=TwoWay}" />
                         <TextBlock Style="{StaticResource Hint}"
-                                   Text="在股票名称后面显示代码；关闭后面板更简洁。面板没有底板，只有文字，可直接拖到任意位置。" />
+                                   Text="在股票名称后面显示代码；关闭后更简洁。整块面板都可以直接拖到任意位置。" />
                     </StackPanel>
                 </ScrollViewer>
 
@@ -371,12 +391,10 @@
                                    Text="1 秒最灵敏；所有市场都收盘时会自动降到 60 秒刷新一次，面板隐藏时暂停轮询。" />
 
                         <TextBlock Style="{StaticResource SectionTitle}" Text="面板" />
-                        <CheckBox Style="{StaticResource SwitchCheck}" Content="窗口置顶"
-                                  IsChecked="{Binding TopMost, Mode=TwoWay}" />
                         <CheckBox Style="{StaticResource SwitchCheck}" Content="固定面板位置"
-                                  Margin="0,14,0,0" IsChecked="{Binding Locked, Mode=TwoWay}" />
+                                  IsChecked="{Binding Locked, Mode=TwoWay}" />
                         <TextBlock Style="{StaticResource Hint}"
-                                   Text="也可以直接点面板右上角的别针；固定后拖动不会移动，避免误触。" />
+                                   Text="也可以直接点面板右上角的别针；固定后拖动不会移动，避免误触。面板始终置顶。" />
                         <Button Content="重置面板位置" Style="{StaticResource GhostButton}" Height="30"
                                 HorizontalAlignment="Left" Margin="0,12,0,0" Click="ResetPosition_Click" />
 

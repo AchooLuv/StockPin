@@ -68,17 +68,22 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
-    public bool TopMost
+    /// <summary>Panel plate opacity in percent (0 = pure text).</summary>
+    public double BackdropPercent
     {
-        get => _config.TopMost;
+        get => _config.Backdrop;
         set
         {
-            if (_config.TopMost == value) return;
-            _config.TopMost = value;
+            int clamped = Math.Clamp((int)Math.Round(value), 0, 100);
+            if (_config.Backdrop == clamped) return;
+            _config.Backdrop = clamped;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(BackdropLabel));
             Raise();
         }
     }
+
+    public string BackdropLabel => _config.Backdrop + "%";
 
     public bool Locked
     {

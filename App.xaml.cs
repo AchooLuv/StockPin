@@ -180,8 +180,9 @@ public partial class App : Application
 
         if (Panel != null)
         {
-            Panel.Topmost = Config.TopMost;
+            Panel.Topmost = true;
             Panel.RefreshLockState();
+            Panel.RefreshBackdrop();
         }
 
         if (PersistEnabled && !_demo && _appliedAutoStart != Config.AutoStart)

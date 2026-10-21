@@ -1,4 +1,4 @@
-﻿namespace StockPin.Core;
+namespace StockPin.Core;
 
 using System.Windows.Media.Effects;
 
@@ -152,6 +152,8 @@ public static class ThemeManager
             ["Down"] = ThemePalette.Solid(p.Down),
             ["Flat"] = ThemePalette.Solid(p.Flat),
             ["OnAccent"] = ThemePalette.Solid(p.IsDark ? p.WindowBg : "#FFFFFFFF"),
+            ["ButtonBg"] = ThemePalette.Solid(p.IsDark ? p.Accent : p.Text),
+            ["ButtonText"] = ThemePalette.Solid(p.IsDark ? p.WindowBg : "#FFFFFFFF"),
             ["TextShadow"] = BuildShadow(p)
         };
 

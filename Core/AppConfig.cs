@@ -50,7 +50,10 @@ public sealed class AppConfig
     public List<StockConfig> Stocks { get; set; } = new();
     public int Theme { get; set; }
     public int IntervalSec { get; set; } = 3;
-    public bool TopMost { get; set; } = true;
+
+    /// <summary>Panel plate opacity in percent: 0 = pure text, 100 = solid card.</summary>
+    public int Backdrop { get; set; } = 70;
+
     public bool Locked { get; set; }
     public bool AutoStart { get; set; }
     public bool ShowCode { get; set; } = true;

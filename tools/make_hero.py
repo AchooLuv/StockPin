@@ -1,4 +1,4 @@
-﻿"""Compose the README hero image from rendered panel screenshots (text-only, transparent)."""
+"""Compose the README hero image from rendered panel screenshots (text-only, transparent)."""
 from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
 
@@ -41,11 +41,11 @@ def scaled(path, scale):
     return img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
 
 
-blue = scaled("out/panel1.png", 0.85)
-purple = scaled("out/panel3.png", 0.85)
+light = scaled("out/panel0.png", 0.85)
+dark = scaled("out/panel1.png", 0.85)
 
-canvas.alpha_composite(purple, (655, 320))
-canvas.alpha_composite(blue, (35, 115))
+canvas.alpha_composite(dark, (655, 320))
+canvas.alpha_composite(light, (35, 115))
 
 import os
 os.makedirs("docs", exist_ok=True)

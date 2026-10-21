@@ -62,7 +62,7 @@
     <!-- No card, no border: only the text is painted.
          The 1/255 alpha backdrop is invisible but makes the whole panel draggable
          (a fully transparent layered window is click-through per pixel). -->
-    <Border x:Name="Root" Background="#01000000"
+    <Border x:Name="Root" Background="#01000000" CornerRadius="12"
             Padding="0,2,0,4" MouseLeftButtonDown="Root_MouseLeftButtonDown">
         <Grid Effect="{DynamicResource TextShadow}">
             <Grid.RowDefinitions>
@@ -101,35 +101,22 @@
                 </StackPanel>
             </Grid>
 
-            <!-- ================= compact simulated portfolio ================= -->
-            <StackPanel Grid.Row="1" Margin="11,4,11,5" ToolTip="{Binding FxTooltip}"
-                        Visibility="{Binding HasPortfolio, Converter={StaticResource BoolToVis}}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+            <!-- ================= compact simulated portfolio (one line) ================= -->
+            <Grid Grid.Row="1" Margin="11,5,11,5" ToolTip="{Binding FxTooltip}"
+                  Visibility="{Binding HasPortfolio, Converter={StaticResource BoolToVis}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="持仓" FontSize="9" Foreground="{DynamicResource TextMuted}"
-                                   VerticalAlignment="Center" Margin="0,0,4,0" />
-                        <TextBlock Text="{Binding PortfolioValueText}" FontSize="11.5" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
-                    </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="持仓" FontSize="9" Foreground="{DynamicResource TextMuted}"
+                               VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <TextBlock Text="{Binding PortfolioValueText}" FontSize="11.5" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                </StackPanel>
 
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="总盈亏" FontSize="9" Foreground="{DynamicResource TextMuted}"
-                                   VerticalAlignment="Center" Margin="0,0,4,0" />
-                        <TextBlock Text="{Binding TotalPlText}" Tag="{Binding TotalPlDirection}"
-                                   Style="{StaticResource DirectionText}" FontSize="11.5" FontWeight="SemiBold"
-                                   VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding TotalPlPctText}" Tag="{Binding TotalPlDirection}"
-                                   Style="{StaticResource DirectionText}" FontSize="9" Margin="4,1,0,0"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
-                </Grid>
-
-                <StackPanel Orientation="Horizontal" Margin="0,2,0,0" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="今日" FontSize="9" Foreground="{DynamicResource TextMuted}"
                                VerticalAlignment="Center" Margin="0,0,4,0" />
                     <TextBlock Text="{Binding TodayPlText}" Tag="{Binding TodayPctDirection}"
@@ -139,7 +126,7 @@
                                Style="{StaticResource DirectionText}" FontSize="9" Margin="4,1,0,0"
                                VerticalAlignment="Center" />
                 </StackPanel>
-            </StackPanel>
+            </Grid>
 
             <!-- ================= watch list ================= -->
             <Grid Grid.Row="2">

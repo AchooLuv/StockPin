@@ -32,6 +32,7 @@ public static class ConfigService
             config.Stocks ??= new List<StockConfig>();
             config.Theme = Math.Clamp(config.Theme, 0, 3);
             config.IntervalSec = config.IntervalSec is 1 or 2 or 3 or 5 or 10 or 30 or 60 ? config.IntervalSec : 3;
+            config.Backdrop = Math.Clamp(config.Backdrop, 0, 100);
             return config;
         }
         catch (Exception ex)

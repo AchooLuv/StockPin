@@ -17,7 +17,7 @@ public partial class MainWindow : Window
         _config = config;
         DataContext = vm;
 
-        Topmost = config.TopMost;
+        Topmost = true;
 
         Loaded += OnLoaded;
         Closing += OnClosing;
@@ -48,6 +48,43 @@ public partial class MainWindow : Window
             Log.Warn("panel has no composition target; DPI scaling may be wrong");
 
         RefreshLockState();
+        RefreshBackdrop();
+    }
+
+    /// <summary>
+    /// Paints the translucent plate behind the text. 0% keeps the pure-text look;
+    /// higher values guarantee readability over games / busy wallpapers.
+    /// </summary>
+    public void RefreshBackdrop()
+    {
+        var palette = ThemeManager.CurrentPalette;
+        double strength = Math.Clamp(_config.Backdrop, 0, 100) / 100.0;
+
+        if (strength <= 0.005)
+        {
+            Root.Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0));
+            Root.BorderThickness = new Thickness(0);
+            Root.CornerRadius = new CornerRadius(0);
+            return;
+        }
+
+        var top = ThemePalette.Parse(palette.BgTop);
+        var bottom = ThemePalette.Parse(palette.BgBottom);
+        byte alpha = (byte)Math.Round(255 * strength);
+        top.A = alpha;
+        bottom.A = alpha;
+
+        var plate = new LinearGradientBrush(top, bottom, new Point(0, 0), new Point(0.55, 1));
+        plate.Freeze();
+        Root.Background = plate;
+
+        var borderColor = ThemePalette.Parse(palette.Border);
+        borderColor.A = (byte)Math.Min(255, 150 + 105 * strength);
+        var border = new SolidColorBrush(borderColor);
+        border.Freeze();
+        Root.BorderBrush = border;
+        Root.BorderThickness = new Thickness(1);
+        Root.CornerRadius = new CornerRadius(12);
     }
 
     private void ApplyWorkAreaLimits()
@@ -59,15 +96,15 @@ public partial class MainWindow : Window
 
     public void RefreshLockState()
     {
-        var accent = TryFindResource("Accent") as Brush ?? Brushes.White;
-        var onAccent = TryFindResource("OnAccent") as Brush ?? Brushes.Black;
+        var buttonBg = TryFindResource("ButtonBg") as Brush ?? Brushes.White;
+        var buttonText = TryFindResource("ButtonText") as Brush ?? Brushes.Black;
         var muted = TryFindResource("TextMuted") as Brush ?? Brushes.Gray;
 
-        // Pinned: upright pin on a solid accent chip. Unpinned: lying pin, muted, no chip.
+        // Pinned: upright pin on a solid chip. Unpinned: lying pin, muted, no chip.
         LockGlyph.Text = _config.Locked ? "\uE840" : "\uE718";
         LockButton.ToolTip = _config.Locked ? "取消固定" : "固定面板位置";
-        LockGlyph.Foreground = _config.Locked ? onAccent : muted;
-        LockButton.Background = _config.Locked ? accent : Brushes.Transparent;
+        LockGlyph.Foreground = _config.Locked ? buttonText : muted;
+        LockButton.Background = _config.Locked ? buttonBg : Brushes.Transparent;
         Root.Cursor = _config.Locked ? Cursors.Arrow : Cursors.SizeAll;
     }
 
@@ -238,20 +275,6 @@ public partial class MainWindow : Window
         };
         lockItem.Click += (_, _) => ToggleLock();
         _menu.Items.Add(lockItem);
-
-        var topItem = new MenuItem
-        {
-            Header = "窗口置顶",
-            IsCheckable = true,
-            IsChecked = _config.TopMost
-        };
-        topItem.Click += (_, _) =>
-        {
-            _config.TopMost = !_config.TopMost;
-            Topmost = _config.TopMost;
-            Host.ApplySettings();
-        };
-        _menu.Items.Add(topItem);
 
         _menu.Items.Add(new Separator());
         _menu.Items.Add(Item("隐藏面板", Host.HidePanel));

@@ -331,7 +331,8 @@ public sealed class MainViewModel : ObservableObject
         TotalPlPctText = "(" + SignedPct(totalPct) + ")";
         TotalPlDirection = Dir(totalPl).ToString();
         TodayPctDirection = Dir(todayPl).ToString();
-        FxTooltip = $"按实时汇率折算人民币\nUSD/CNH {_usdRate:F4}   HKD/CNH {_hkdRate:F4}";
+        FxTooltip = $"总盈亏 {TotalPlText} {TotalPlPctText}\n今日 {TodayPlText} {TodayPctText}\n" +
+                    $"按实时汇率折算人民币\nUSD/CNH {_usdRate:F4}   HKD/CNH {_hkdRate:F4}";
     }
 
     private static string SignedPct(double pct)
