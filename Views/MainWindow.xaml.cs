@@ -1,4 +1,4 @@
-﻿namespace StockPin.Views;
+namespace StockPin.Views;
 
 using System.Windows.Interop;
 
@@ -195,6 +195,8 @@ public partial class MainWindow : Window
         while (source != null)
         {
             if (source is System.Windows.Controls.Primitives.ButtonBase) return true;
+            if (source is System.Windows.Controls.Primitives.ScrollBar) return true;
+            if (source is System.Windows.Controls.Primitives.Thumb) return true;
             source = source is Visual ? VisualTreeHelper.GetParent(source) : null;
         }
         return false;
