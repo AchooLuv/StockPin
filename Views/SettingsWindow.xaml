@@ -373,10 +373,10 @@
                         <TextBlock Style="{StaticResource SectionTitle}" Text="面板" />
                         <CheckBox Style="{StaticResource SwitchCheck}" Content="窗口置顶"
                                   IsChecked="{Binding TopMost, Mode=TwoWay}" />
-                        <CheckBox Style="{StaticResource SwitchCheck}" Content="锁定面板位置"
+                        <CheckBox Style="{StaticResource SwitchCheck}" Content="固定面板位置"
                                   Margin="0,14,0,0" IsChecked="{Binding Locked, Mode=TwoWay}" />
                         <TextBlock Style="{StaticResource Hint}"
-                                   Text="也可以直接点面板右上角的小锁；锁定后拖动不会移动，避免误触。" />
+                                   Text="也可以直接点面板右上角的别针；固定后拖动不会移动，避免误触。" />
                         <Button Content="重置面板位置" Style="{StaticResource GhostButton}" Height="30"
                                 HorizontalAlignment="Left" Margin="0,12,0,0" Click="ResetPosition_Click" />
 

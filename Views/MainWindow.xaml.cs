@@ -60,10 +60,14 @@ public partial class MainWindow : Window
     public void RefreshLockState()
     {
         var accent = TryFindResource("Accent") as Brush ?? Brushes.White;
+        var onAccent = TryFindResource("OnAccent") as Brush ?? Brushes.Black;
         var muted = TryFindResource("TextMuted") as Brush ?? Brushes.Gray;
 
-        LockButton.ToolTip = _config.Locked ? "解锁面板位置" : "锁定面板位置";
-        LockGlyph.Foreground = _config.Locked ? accent : muted;
+        // Pinned: upright pin on a solid accent chip. Unpinned: lying pin, muted, no chip.
+        LockGlyph.Text = _config.Locked ? "\uE840" : "\uE718";
+        LockButton.ToolTip = _config.Locked ? "取消固定" : "固定面板位置";
+        LockGlyph.Foreground = _config.Locked ? onAccent : muted;
+        LockButton.Background = _config.Locked ? accent : Brushes.Transparent;
         Root.Cursor = _config.Locked ? Cursors.Arrow : Cursors.SizeAll;
     }
 
@@ -83,49 +87,21 @@ public partial class MainWindow : Window
 
     // ------------------------------------------------------------------ window drag
 
-    private bool _dragging;
-    private Point _dragStartPoint;
-    private double _dragStartLeft;
-    private double _dragStartTop;
-
     private void Root_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (_config.Locked) return;
         if (IsInsideButton(e.OriginalSource as DependencyObject)) return;
-        _dragging = true;
-        _dragStartPoint = e.GetPosition(this);
-        _dragStartLeft = Left;
-        _dragStartTop = Top;
-        CaptureMouse();
-        e.Handled = true;
-    }
 
-    private void Root_MouseMove(object sender, MouseEventArgs e)
-    {
-        if (!_dragging) return;
-        if (e.LeftButton != MouseButtonState.Pressed)
+        // Let Windows run its own move loop. Doing this by hand while the window
+        // follows the cursor causes a move → mouse-move → move feedback loop.
+        try
         {
-            EndDrag();
+            DragMove();
+        }
+        catch (InvalidOperationException)
+        {
             return;
         }
-
-        var point = e.GetPosition(this);
-        Left = _dragStartLeft + (point.X - _dragStartPoint.X);
-        Top = _dragStartTop + (point.Y - _dragStartPoint.Y);
-    }
-
-    private void Root_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (!_dragging) return;
-        EndDrag();
-    }
-
-    private void Root_LostMouseCapture(object sender, MouseEventArgs e) => _dragging = false;
-
-    private void EndDrag()
-    {
-        _dragging = false;
-        if (IsMouseCaptured) ReleaseMouseCapture();
 
         SnapToEdges();
         ClampToScreen();
@@ -256,7 +232,7 @@ public partial class MainWindow : Window
 
         var lockItem = new MenuItem
         {
-            Header = "锁定面板位置",
+            Header = "固定面板位置",
             IsCheckable = true,
             IsChecked = _config.Locked
         };

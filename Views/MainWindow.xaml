@@ -42,7 +42,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="Transparent">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -63,9 +63,7 @@
          The 1/255 alpha backdrop is invisible but makes the whole panel draggable
          (a fully transparent layered window is click-through per pixel). -->
     <Border x:Name="Root" Background="#01000000"
-            Padding="0,2,0,4" MouseLeftButtonDown="Root_MouseLeftButtonDown"
-            MouseMove="Root_MouseMove" MouseLeftButtonUp="Root_MouseLeftButtonUp"
-            LostMouseCapture="Root_LostMouseCapture">
+            Padding="0,2,0,4" MouseLeftButtonDown="Root_MouseLeftButtonDown">
         <Grid Effect="{DynamicResource TextShadow}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="34" />
@@ -85,8 +83,8 @@
                 <StackPanel x:Name="HeaderButtons" Orientation="Horizontal" HorizontalAlignment="Right"
                             Margin="0,0,8,0" VerticalAlignment="Center">
                     <Button x:Name="LockButton" Style="{StaticResource PanelIconButton}"
-                            Click="Lock_Click" ToolTip="锁定面板位置">
-                        <TextBlock x:Name="LockGlyph" Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
+                            Click="Lock_Click" ToolTip="固定面板位置">
+                        <TextBlock x:Name="LockGlyph" Text="&#xE718;" FontFamily="Segoe MDL2 Assets" FontSize="12.5" />
                     </Button>
                     <Button Style="{StaticResource PanelIconButton}" Click="Refresh_Click" ToolTip="立即刷新">
                         <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
