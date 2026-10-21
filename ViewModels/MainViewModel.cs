@@ -1,4 +1,4 @@
-﻿namespace StockPin.ViewModels;
+namespace StockPin.ViewModels;
 
 /// <summary>Panel state: watch list, quotes, simulated portfolio and polling.</summary>
 public sealed class MainViewModel : ObservableObject
@@ -197,11 +197,26 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var ids = Stocks.Select(s => s.SecId).ToList();
-            var quotes = await _quotes.FetchQuotesAsync(ids, CancellationToken.None).ConfigureAwait(true);
+            var markets = Stocks.Select(s => s.Market).Distinct().ToList();
+            var probes = markets.Select(MarketClock.ProbeSecId)
+                .Where(p => !ids.Contains(p, StringComparer.Ordinal))
+                .ToList();
+
+            var quotes = await _quotes.FetchQuotesAsync(ids.Concat(probes), CancellationToken.None)
+                .ConfigureAwait(true);
+
             if (quotes.Count == 0)
             {
                 SetStatus("行情连接异常，正在重试…");
                 return;
+            }
+
+            // Benchmark timestamps tell a real session from a holiday.
+            var heartbeat = new Dictionary<string, DateTimeOffset>(StringComparer.Ordinal);
+            foreach (var market in markets)
+            {
+                if (quotes.TryGetValue(MarketClock.ProbeSecId(market), out var probe) && probe.HasData)
+                    heartbeat[market] = probe.UpdatedAt;
             }
 
             if (Stocks.Any(s => s.Qty > 0 && s.Market != MarketKind.A))
@@ -216,7 +231,8 @@ public sealed class MainViewModel : ObservableObject
 
             foreach (var entry in Stocks)
             {
-                bool open = MarketClock.IsOpen(entry.Market, now);
+                DateTimeOffset? hb = heartbeat.TryGetValue(entry.Market, out var stamp) ? stamp : null;
+                bool open = MarketClock.IsTrading(entry.Market, now, hb);
                 if (quotes.TryGetValue(entry.SecId, out var quote))
                 {
                     if (!string.IsNullOrWhiteSpace(quote.Name) && quote.Name != entry.Name) namesChanged = true;
