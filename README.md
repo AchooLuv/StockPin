@@ -23,9 +23,16 @@
 
 ## 下载
 
-到 [Releases](https://github.com/AchooLuv/StockPin/releases/latest) 下载 **StockPin.exe**，双击即用：
+到 [Releases](https://github.com/AchooLuv/StockPin/releases/latest) 下载：
 
-- Windows 10 / 11 x64，单文件，无需安装 .NET 运行时
+| 文件 | 大小 | 说明 |
+| --- | --- | --- |
+| **StockPin.exe** | ~63 MB | 完整版，单文件，已内置 .NET 运行时，双击即用 |
+| **StockPin-lite.exe** | ~0.4 MB | 精简版，需先安装 [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
+
+> 完整版之所以大，是因为把 .NET 8 + WPF 运行时一起打包了，程序本身只有几百 KB。不想装运行时就下完整版。
+
+- Windows 10 / 11 x64
 - 免安装，配置保存在 `%APPDATA%\StockPin\config.json`
 - 若首次运行出现 SmartScreen 提示，点「更多信息 → 仍要运行」
 
@@ -58,10 +65,14 @@
 需要 .NET 8 SDK：
 
 ```bash
+# 完整版：单文件，内置 .NET 运行时（约 63 MB）
 dotnet publish -c Release -r win-x64 --self-contained true -o dist
+
+# 精简版：依赖已安装的 .NET 8 Desktop Runtime（约 0.4 MB）
+dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist-lite
 ```
 
-产物为 `dist/StockPin.exe`（单文件，内含运行时）。
+产物为 `dist/StockPin.exe` 或 `dist-lite/StockPin.exe`。
 
 ## 项目结构
 
