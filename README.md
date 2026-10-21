@@ -1,8 +1,8 @@
-# StockPin
+﻿# StockPin
 
 **轻量、透明、始终置顶的桌面股票盯盘小工具** · A股 / 港股 / 美股 · Windows 10 / 11
 
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-5b6ea8?style=flat-square)](../../releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-5b6ea8?style=flat-square)](https://github.com/AchooLuv/StockPin/releases/latest)
 [![.NET](https://img.shields.io/badge/.NET-8.0-5b6ea8?style=flat-square)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-5b6ea8?style=flat-square)](LICENSE)
 
@@ -22,7 +22,7 @@
 
 ## 下载
 
-到 [Releases](../../releases/latest) 下载 **StockPin.exe**，双击即用：
+到 [Releases](https://github.com/AchooLuv/StockPin/releases/latest) 下载 **StockPin.exe**，双击即用：
 
 - Windows 10 / 11 x64，单文件，无需安装 .NET 运行时
 - 免安装，配置保存在 `%APPDATA%\StockPin\config.json`
