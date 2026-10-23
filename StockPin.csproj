@@ -12,9 +12,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>StockPin</AssemblyName>
     <RootNamespace>StockPin</RootNamespace>
-    <Version>1.1.5</Version>
-    <AssemblyVersion>1.1.5.0</AssemblyVersion>
-    <FileVersion>1.1.5.0</FileVersion>
+    <Version>1.1.6</Version>
+    <AssemblyVersion>1.1.6.0</AssemblyVersion>
+    <FileVersion>1.1.6.0</FileVersion>
     <Product>StockPin</Product>
     <AssemblyTitle>StockPin 股票盯盘</AssemblyTitle>
     <Company>StockPin</Company>

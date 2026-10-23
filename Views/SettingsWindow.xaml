@@ -388,7 +388,7 @@
                                          Tag="60" Checked="Interval_Checked" Margin="6,0,0,0" />
                         </StackPanel>
                         <TextBlock Style="{StaticResource Hint}"
-                                   Text="1 秒最灵敏；只刷新正在交易的市场，收盘后不再请求该市场的股票，开盘前 30 分钟自动恢复；全部休市时降为 60 秒心跳。" />
+                                   Text="建议 3 秒；1 秒最灵敏但请求更频繁。只刷新正在交易的市场，收盘后不再请求，开盘前 30 分钟自动恢复；请求失败会自动退避，不会一直高频重试。" />
 
                         <TextBlock Style="{StaticResource SectionTitle}" Text="面板" />
                         <CheckBox Style="{StaticResource SwitchCheck}" Content="固定面板位置"

@@ -20,6 +20,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _anyTrading;
     private bool _anyWarmup;
     private bool _anyLunch;
+    private int _failStreak;
 
     private double _usdRate = 7.10;
     private double _hkdRate = 0.92;
@@ -205,6 +206,7 @@ public sealed class MainViewModel : ObservableObject
         if (Stocks.Count == 0)
         {
             _anyTrading = _anyWarmup = _anyLunch = false;
+            _failStreak = 0;
             UpdateTimerInterval();
             RecalcPortfolio();
             return;
@@ -259,9 +261,12 @@ public sealed class MainViewModel : ObservableObject
 
             if (quotes.Count == 0)
             {
+                _failStreak = Math.Min(_failStreak + 1, 6);
                 SetStatus("行情连接异常，正在重试…");
                 return;
             }
+
+            _failStreak = 0;
 
             foreach (var market in markets)
             {
@@ -313,7 +318,8 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Log.Warn("refresh failed: " + ex.Message);
+            _failStreak = Math.Min(_failStreak + 1, 6);
+            Log.Warn("refresh failed: " + Describe(ex));
             SetStatus("行情连接异常，正在重试…");
         }
         finally
@@ -332,6 +338,13 @@ public sealed class MainViewModel : ObservableObject
         else if (_anyLunch) seconds = 30;
         else seconds = 60;
 
+        // Back off after failures instead of hammering a struggling endpoint at 1s.
+        if (_failStreak > 0)
+        {
+            int backoff = _failStreak switch { 1 => 5, 2 => 10, 3 => 20, _ => 60 };
+            seconds = Math.Max(seconds, backoff);
+        }
+
         var interval = TimeSpan.FromSeconds(seconds);
         if (_timer.Interval != interval) _timer.Interval = interval;
         if (!_paused && !_timer.IsEnabled && Stocks.Count > 0) _timer.Start();
@@ -341,6 +354,14 @@ public sealed class MainViewModel : ObservableObject
     {
         StatusText = text;
         HasError = text.Length > 0;
+    }
+
+    private static string Describe(Exception ex)
+    {
+        var text = ex.Message;
+        for (var inner = ex.InnerException; inner != null; inner = inner.InnerException)
+            text += " | " + inner.Message;
+        return text;
     }
 
     // ------------------------------------------------------------------ portfolio
