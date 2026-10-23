@@ -1,17 +1,27 @@
-﻿namespace StockPin.Services;
+namespace StockPin.Services;
 
 /// <summary>
-/// Free quote access through Eastmoney's public HTTP endpoints (no key, no scraping).
-/// One batched request per refresh keeps the app light.
+/// Free quotes via Tencent's public batch endpoint (A / HK / US in one request),
+/// FX via Sina, symbol search via Eastmoney. No key, no scraping.
 /// </summary>
 public sealed class QuoteService : IDisposable
 {
-    private const string BatchUrl = "https://push2.eastmoney.com/api/qt/ulist.np/get";
+    private const string TencentUrl = "https://qt.gtimg.cn/q=";
+    private const string SinaUrl = "https://hq.sinajs.cn/list=";
     private const string SearchUrl = "https://searchapi.eastmoney.com/api/suggest/get";
     private const string SearchToken = "D43BF722C8E33BDC906FB84D85E326E8";
-    private const string Fields = "f2,f3,f4,f12,f13,f14,f15,f16,f17,f18,f124";
+
+    private static readonly TimeZoneInfo NewYork = FindZone("America/New_York", "Eastern Standard Time");
+    private static Encoding _gbk = Encoding.UTF8;
 
     private readonly HttpClient _http;
+
+    static QuoteService()
+    {
+        // Tencent / Sina return GBK; .NET Core needs the code pages provider for that.
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        _gbk = Encoding.GetEncoding("GB18030");
+    }
 
     public QuoteService()
     {
@@ -25,28 +35,42 @@ public sealed class QuoteService : IDisposable
         _http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
         _http.DefaultRequestHeaders.UserAgent.ParseAdd(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
-        _http.DefaultRequestHeaders.Referrer = new Uri("https://quote.eastmoney.com/");
     }
 
     public async Task<Dictionary<string, Quote>> FetchQuotesAsync(IEnumerable<string> secIds, CancellationToken ct)
     {
-        var list = secIds.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.Ordinal).ToList();
         var result = new Dictionary<string, Quote>(StringComparer.Ordinal);
-        if (list.Count == 0) return result;
+        var symbolToSecId = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        var url = $"{BatchUrl}?fltt=2&secids={string.Join(",", list)}&fields={Fields}&_={Epoch()}";
-        using var doc = await GetJsonAsync(url, ct).ConfigureAwait(false);
-        if (doc == null) return result;
-
-        if (!doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object)
-            return result;
-        if (!data.TryGetProperty("diff", out var diff) || diff.ValueKind != JsonValueKind.Array)
-            return result;
-
-        foreach (var item in diff.EnumerateArray())
+        foreach (var secId in secIds)
         {
-            var quote = ParseQuote(item);
-            if (quote != null) result[quote.SecId] = quote;
+            if (string.IsNullOrWhiteSpace(secId)) continue;
+            var symbol = ToTencentSymbol(secId);
+            if (symbol == null || symbolToSecId.ContainsKey(symbol)) continue;
+            symbolToSecId[symbol] = secId;
+        }
+
+        if (symbolToSecId.Count == 0) return result;
+
+        var url = TencentUrl + string.Join(",", symbolToSecId.Keys) + "&_=" + Epoch();
+        var text = await GetTextAsync(url, "https://gu.qq.com/", ct).ConfigureAwait(false);
+        if (string.IsNullOrEmpty(text)) return result;
+
+        foreach (var rawLine in text.Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (!line.StartsWith("v_", StringComparison.Ordinal)) continue;
+
+            int equals = line.IndexOf('=');
+            if (equals <= 2) continue;
+
+            var symbol = line[2..equals];
+            if (!symbolToSecId.TryGetValue(symbol, out var secId)) continue;
+
+            var payload = line[(equals + 1)..].Trim().TrimEnd(';').Trim('"');
+            var fields = payload.Split('~');
+            var quote = ParseTencentQuote(secId, fields);
+            if (quote != null) result[secId] = quote;
         }
 
         return result;
@@ -57,28 +81,22 @@ public sealed class QuoteService : IDisposable
     {
         try
         {
-            var url = $"{BatchUrl}?fltt=2&secids=133.USDCNH,133.HKDCNH&fields=f2,f12&_={Epoch()}";
-            using var doc = await GetJsonAsync(url, ct).ConfigureAwait(false);
-            if (doc == null) return (0, 0);
-            if (!doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object)
-                return (0, 0);
-            if (!data.TryGetProperty("diff", out var diff) || diff.ValueKind != JsonValueKind.Array)
-                return (0, 0);
+            var text = await GetTextAsync(SinaUrl + "fx_susdcnh,fx_shkdcnh", "https://finance.sina.com.cn", ct)
+                .ConfigureAwait(false);
+            if (string.IsNullOrEmpty(text)) return (0, 0);
 
             double usd = 0, hkd = 0;
-            foreach (var item in diff.EnumerateArray())
+            foreach (var line in text.Split('\n'))
             {
-                var code = Str(item, "f12");
-                var value = Num(item, "f2");
-                if (code == "USDCNH") usd = value;
-                else if (code == "HKDCNH") hkd = value;
+                if (line.Contains("hq_str_fx_susdcnh=", StringComparison.Ordinal)) usd = ParseSinaFx(line);
+                else if (line.Contains("hq_str_fx_shkdcnh=", StringComparison.Ordinal)) hkd = ParseSinaFx(line);
             }
 
             return (usd, hkd);
         }
         catch (Exception ex)
         {
-            Log.Warn("fx fetch failed: " + ex.Message);
+            Log.Warn("fx fetch failed: " + Describe(ex));
             return (0, 0);
         }
     }
@@ -129,6 +147,31 @@ public sealed class QuoteService : IDisposable
 
     // ---------------------------------------------------------------- helpers
 
+    private async Task<string?> GetTextAsync(string url, string referer, CancellationToken ct)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Referrer = new Uri(referer);
+
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseContentRead, ct)
+                .ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            var bytes = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+            return bytes.Length == 0 ? null : _gbk.GetString(bytes);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("quote request failed: " + Describe(ex));
+            return null;
+        }
+    }
+
     private async Task<JsonDocument?> GetJsonAsync(string url, CancellationToken ct)
     {
         try
@@ -143,55 +186,134 @@ public sealed class QuoteService : IDisposable
         }
         catch (Exception ex)
         {
-            Log.Warn("quote request failed: " + ex.Message);
+            Log.Warn("search request failed: " + Describe(ex));
             return null;
         }
     }
 
-    private static Quote? ParseQuote(JsonElement item)
+    private static Quote? ParseTencentQuote(string secId, string[] f)
     {
-        var code = Str(item, "f12");
-        var market = (int)Num(item, "f13");
-        if (code.Length == 0) return null;
+        // 1 name · 2 code · 3 price · 4 prev close · 5 open · 30 time
+        // 31 change · 32 change % · 33 high · 34 low
+        if (f.Length < 35) return null;
 
-        var secId = market.ToString(CultureInfo.InvariantCulture) + "." + code;
-        var price = Num(item, "f2");
-        var prevClose = Num(item, "f18");
-        var changePct = Num(item, "f3");
-        var changeAmt = Num(item, "f4");
-        var ts = Num(item, "f124");
-
+        var price = ParseNum(f[3]);
         if (price <= 0) return null;
 
-        if (Math.Abs(changePct) < 0.00001 && prevClose > 0 && price > 0)
+        var market = MarketKind.FromSecId(secId);
+        var prevClose = ParseNum(f[4]);
+        var changePct = ParseNum(f[32]);
+        var changeAmt = ParseNum(f[31]);
+
+        if (Math.Abs(changePct) < 0.00001 && prevClose > 0)
             changePct = (price - prevClose) / prevClose * 100;
 
-        DateTimeOffset updated = DateTimeOffset.Now;
-        if (ts > 1_000_000_000)
-        {
-            try
-            {
-                updated = DateTimeOffset.FromUnixTimeSeconds((long)ts);
-            }
-            catch
-            {
-                // keep now
-            }
-        }
+        int dot = secId.IndexOf('.');
+        var code = dot >= 0 ? secId[(dot + 1)..] : f[2];
 
         return new Quote(
             secId,
             code,
-            Str(item, "f14"),
+            f[1].Trim(),
             price,
             prevClose,
             changePct,
             changeAmt,
-            Num(item, "f17"),
-            Num(item, "f15"),
-            Num(item, "f16"),
-            updated,
+            ParseNum(f[5]),
+            ParseNum(f[33]),
+            ParseNum(f[34]),
+            ParseTime(f[30], market),
             true);
+    }
+
+    private static string? ToTencentSymbol(string secId)
+    {
+        int dot = secId.IndexOf('.');
+        if (dot <= 0 || dot == secId.Length - 1) return null;
+
+        var prefix = secId[..dot];
+        var code = secId[(dot + 1)..];
+
+        return prefix switch
+        {
+            "1" => "sh" + code,
+            "0" => code.Length == 6 && (code[0] == '4' || code[0] == '8') ? "bj" + code : "sz" + code,
+            "116" => "hk" + (code.All(char.IsDigit) ? code.PadLeft(5, '0') : code),
+            "105" or "106" or "107" => "us" + code,
+            _ => null
+        };
+    }
+
+    private static DateTimeOffset ParseTime(string raw, string market)
+    {
+        raw = (raw ?? "").Trim();
+        if (raw.Length == 0) return DateTimeOffset.Now;
+
+        if (market == MarketKind.US)
+        {
+            if (DateTime.TryParseExact(raw, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var us))
+            {
+                var unspecified = DateTime.SpecifyKind(us, DateTimeKind.Unspecified);
+                return new DateTimeOffset(unspecified, NewYork.GetUtcOffset(unspecified));
+            }
+        }
+        else if (market == MarketKind.HK)
+        {
+            if (DateTime.TryParseExact(raw, "yyyy/MM/dd HH:mm:ss", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var hk))
+                return new DateTimeOffset(hk, TimeSpan.FromHours(8));
+        }
+        else if (DateTime.TryParseExact(raw, "yyyyMMddHHmmss", CultureInfo.InvariantCulture,
+                     DateTimeStyles.None, out var a))
+        {
+            return new DateTimeOffset(a, TimeSpan.FromHours(8));
+        }
+
+        return DateTimeOffset.Now;
+    }
+
+    private static double ParseSinaFx(string line)
+    {
+        int first = line.IndexOf('"');
+        int last = line.LastIndexOf('"');
+        if (first < 0 || last <= first) return 0;
+
+        var parts = line[(first + 1)..last].Split(',');
+        // 8 = current price, 1 = bid
+        if (parts.Length > 8 && ParseNum(parts[8]) > 0) return ParseNum(parts[8]);
+        if (parts.Length > 1 && ParseNum(parts[1]) > 0) return ParseNum(parts[1]);
+        return 0;
+    }
+
+    private static double ParseNum(string? text)
+        => double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : 0;
+
+    private static string Describe(Exception ex)
+    {
+        var builder = new StringBuilder(ex.Message);
+        for (var inner = ex.InnerException; inner != null; inner = inner.InnerException)
+            builder.Append(" | ").Append(inner.Message);
+        return builder.ToString();
+    }
+
+    private static TimeZoneInfo FindZone(string iana, string windows)
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(iana);
+        }
+        catch
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(windows);
+            }
+            catch
+            {
+                return TimeZoneInfo.Utc;
+            }
+        }
     }
 
     private static string Str(JsonElement item, string name)
@@ -203,22 +325,6 @@ public sealed class QuoteService : IDisposable
             JsonValueKind.Number => value.ToString(),
             _ => ""
         };
-    }
-
-    private static double Num(JsonElement item, string name)
-    {
-        if (!item.TryGetProperty(name, out var value)) return 0;
-        switch (value.ValueKind)
-        {
-            case JsonValueKind.Number:
-                return value.TryGetDouble(out var d) ? d : 0;
-            case JsonValueKind.String:
-                return double.TryParse(value.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
-                    ? parsed
-                    : 0;
-            default:
-                return 0;
-        }
     }
 
     private static long Epoch() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();

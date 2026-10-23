@@ -19,9 +19,9 @@ public static class MarketClock
     /// <summary>Benchmark symbol used as a heartbeat to tell a real session from a public holiday.</summary>
     public static string ProbeSecId(string market) => market switch
     {
-        MarketKind.HK => "100.HSI",
-        MarketKind.US => "100.SPX",
-        _ => "1.000001"
+        MarketKind.HK => "116.00700",  // hk00700 (Tencent) — updated throughout the HK session
+        MarketKind.US => "105.AAPL",   // usAAPL
+        _ => "1.000001"                // sh000001
     };
 
     public static SessionPhase Phase(string market, DateTimeOffset now)
