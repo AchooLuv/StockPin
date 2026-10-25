@@ -48,7 +48,13 @@ public static class MarketKind
 public sealed class AppConfig
 {
     public List<StockConfig> Stocks { get; set; } = new();
-    public int Theme { get; set; }
+
+    /// <summary>Index into ThemeManager.Themes: 蓝调 / 深海 / 暮紫 / 雾灰. 深海 is the default.</summary>
+    public int Theme { get; set; } = 1;
+
+    /// <summary>2 = current theme order. Older configs have no such field and are migrated on load.</summary>
+    public int ThemeOrder { get; set; } = 2;
+
     public int IntervalSec { get; set; } = 3;
 
     /// <summary>Panel plate opacity in percent: 0 = pure text, 100 = solid card.</summary>

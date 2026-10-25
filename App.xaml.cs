@@ -46,7 +46,7 @@ public partial class App : Application
         if (screenshot || _demo)
         {
             PersistEnabled = false;
-            Config = BuildDemoConfig(themeArg ?? 0);
+            Config = BuildDemoConfig(themeArg ?? 1);
         }
         else
         {

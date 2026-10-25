@@ -9,37 +9,9 @@ public static class ThemeManager
 
     public static IReadOnlyList<ThemePalette> Themes { get; } = new[]
     {
-        // 主题一：雾灰（浅色）
+        // 主题一：蓝调（深色）
         new ThemePalette(
             index: 0,
-            name: "雾灰",
-            note: "浅色 · 柔和",
-            isDark: false,
-            bgTop: "#F2EFF2F7",
-            bgBottom: "#F0E2E6EF",
-            border: "#A6CDD2DC",
-            text: "#FF3E3A3A",
-            muted: "#FF7C8BA8",
-            accent: "#FF788FB2",
-            accentSoft: "#FFAFBBD1",
-            surface: "#A6FFFFFF",
-            hover: "#B8FFFFFF",
-            divider: "#66CDD2DC",
-            chipBg: "#33788FB2",
-            chipText: "#FF5B6E8C",
-            windowBg: "#FFF4F5F9",
-            cardBg: "#FFFFFFFF",
-            inputBg: "#FFFFFFFF",
-            inputBorder: "#FFD5D9E2",
-            switchOff: "#FFC9CFDA",
-            scrollThumb: "#80788FB2",
-            up: "#FFD9454F",
-            down: "#FF1E9C6B",
-            flat: "#FF8B8B93"),
-
-        // 主题二：蓝调（深色）
-        new ThemePalette(
-            index: 1,
             name: "蓝调",
             note: "深色 · 静谧",
             isDark: true,
@@ -65,9 +37,9 @@ public static class ThemeManager
             down: "#FF3ECF8E",
             flat: "#FF8F9BC4"),
 
-        // 主题三：深海（深色）
+        // 主题二：深海（深色，默认）
         new ThemePalette(
-            index: 2,
+            index: 1,
             name: "深海",
             note: "深色 · 沉静",
             isDark: true,
@@ -93,9 +65,9 @@ public static class ThemeManager
             down: "#FF45C39A",
             flat: "#FF7D97A3"),
 
-        // 主题四：暮紫（深色）
+        // 主题三：暮紫（深色）
         new ThemePalette(
-            index: 3,
+            index: 2,
             name: "暮紫",
             note: "深色 · 温柔",
             isDark: true,
@@ -119,7 +91,35 @@ public static class ThemeManager
             scrollThumb: "#80B7A5D0",
             up: "#FFEE6A76",
             down: "#FF45C08F",
-            flat: "#FF9C86A8")
+            flat: "#FF9C86A8"),
+
+        // 主题四：雾灰（浅色）
+        new ThemePalette(
+            index: 3,
+            name: "雾灰",
+            note: "浅色 · 柔和",
+            isDark: false,
+            bgTop: "#F2EFF2F7",
+            bgBottom: "#F0E2E6EF",
+            border: "#A6CDD2DC",
+            text: "#FF3E3A3A",
+            muted: "#FF7C8BA8",
+            accent: "#FF788FB2",
+            accentSoft: "#FFAFBBD1",
+            surface: "#A6FFFFFF",
+            hover: "#B8FFFFFF",
+            divider: "#66CDD2DC",
+            chipBg: "#33788FB2",
+            chipText: "#FF5B6E8C",
+            windowBg: "#FFF4F5F9",
+            cardBg: "#FFFFFFFF",
+            inputBg: "#FFFFFFFF",
+            inputBorder: "#FFD5D9E2",
+            switchOff: "#FFC9CFDA",
+            scrollThumb: "#80788FB2",
+            up: "#FFD9454F",
+            down: "#FF1E9C6B",
+            flat: "#FF8B8B93")
     };
 
     public static int Current { get; private set; }

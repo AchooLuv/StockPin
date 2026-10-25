@@ -27,12 +27,27 @@ public static class ConfigService
         {
             if (!File.Exists(FilePath)) return new AppConfig();
             var json = File.ReadAllText(FilePath, Encoding.UTF8);
+
+            bool hasThemeOrder;
+            using (var doc = JsonDocument.Parse(json))
+                hasThemeOrder = doc.RootElement.TryGetProperty("themeOrder", out _);
+
             var config = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions);
             if (config == null) return new AppConfig();
             config.Stocks ??= new List<StockConfig>();
             config.Theme = Math.Clamp(config.Theme, 0, 3);
             config.IntervalSec = config.IntervalSec is 1 or 2 or 3 or 5 or 10 or 30 or 60 ? config.IntervalSec : 3;
             config.Backdrop = Math.Clamp(config.Backdrop, 0, 100);
+
+            if (!hasThemeOrder)
+            {
+                // Pre-1.1.7 order was 雾灰 / 蓝调 / 深海 / 暮紫; keep the user's actual palette
+                // while switching to the new order.
+                config.Theme = config.Theme switch { 0 => 3, 1 => 0, 2 => 1, _ => 2 };
+                config.ThemeOrder = 2;
+                SaveNow(config);
+            }
+
             return config;
         }
         catch (Exception ex)
