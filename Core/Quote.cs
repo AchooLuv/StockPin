@@ -17,5 +17,4 @@ public sealed record Quote(
 public sealed record StockSearchResult(string SecId, string Code, string Name, string Market, string TypeName)
 {
     public string Tag => MarketKind.Tag(Market);
-    public string MarketLabel => MarketKind.Label(Market);
 }

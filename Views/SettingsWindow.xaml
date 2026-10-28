@@ -201,24 +201,47 @@
                                         <ColumnDefinition Width="32" />
                                     </Grid.ColumnDefinitions>
 
-                                    <Border Grid.Column="0" Background="Transparent" Cursor="SizeNS"
-                                            ToolTip="拖动排序，或在面板右键里上下移动"
+                                    <Border Grid.Column="0" Width="22" Height="22" CornerRadius="6"
+                                            HorizontalAlignment="Left" VerticalAlignment="Center"
+                                            Cursor="SizeAll" ToolTip="按住拖动排序"
                                             PreviewMouseLeftButtonDown="Handle_PreviewMouseLeftButtonDown"
-                                            MouseMove="Handle_MouseMove">
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource TextMuted}" Margin="1" />
-                                                <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource TextMuted}" Margin="1" />
-                                            </StackPanel>
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource TextMuted}" Margin="1" />
-                                                <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource TextMuted}" Margin="1" />
-                                            </StackPanel>
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource TextMuted}" Margin="1" />
-                                                <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource TextMuted}" Margin="1" />
-                                            </StackPanel>
-                                        </StackPanel>
+                                            MouseMove="Handle_MouseMove"
+                                            GiveFeedback="Handle_GiveFeedback">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="Transparent" />
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource Surface}" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+
+                                        <!-- 2 × 3 grip, drawn as one geometry instead of six ellipses -->
+                                        <Path Width="9" Height="14" Stretch="None">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Fill" Value="{DynamicResource TextMuted}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Border}}"
+                                                                     Value="True">
+                                                            <Setter Property="Fill" Value="{DynamicResource Accent}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                            <Path.Data>
+                                                <GeometryGroup>
+                                                    <EllipseGeometry Center="1.5,1.5" RadiusX="1.5" RadiusY="1.5" />
+                                                    <EllipseGeometry Center="7.5,1.5" RadiusX="1.5" RadiusY="1.5" />
+                                                    <EllipseGeometry Center="1.5,7" RadiusX="1.5" RadiusY="1.5" />
+                                                    <EllipseGeometry Center="7.5,7" RadiusX="1.5" RadiusY="1.5" />
+                                                    <EllipseGeometry Center="1.5,12.5" RadiusX="1.5" RadiusY="1.5" />
+                                                    <EllipseGeometry Center="7.5,12.5" RadiusX="1.5" RadiusY="1.5" />
+                                                </GeometryGroup>
+                                            </Path.Data>
+                                        </Path>
                                     </Border>
 
                                     <Border Grid.Column="1" Width="17" Height="17" CornerRadius="4"

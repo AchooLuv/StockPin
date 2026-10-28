@@ -7,7 +7,6 @@ namespace StockPin.Core;
 public sealed class ThemePalette
 {
     public ThemePalette(
-        int index,
         string name,
         string note,
         bool isDark,
@@ -33,7 +32,6 @@ public sealed class ThemePalette
         string down,
         string flat)
     {
-        Index = index;
         Name = name;
         Note = note;
         IsDark = isDark;
@@ -66,7 +64,6 @@ public sealed class ThemePalette
         PreviewSwatches = new[] { Solid(accentSoft), Solid(accent), Solid(muted) };
     }
 
-    public int Index { get; }
     public string Name { get; }
     public string Note { get; }
     public bool IsDark { get; }

@@ -4,11 +4,22 @@ using System.Windows.Interop;
 
 public partial class MainWindow : Window
 {
+    private static readonly SolidColorBrush ClickThrough = CreateClickThrough();
+
     private readonly MainViewModel _vm;
     private readonly AppConfig _config;
     private ContextMenu? _menu;
     private StockEntry? _ctxStock;
     private bool _allowClose;
+
+    private int _backdropTheme = -1;
+    private LinearGradientBrush? _plate;
+    private GradientStop? _plateTop;
+    private GradientStop? _plateBottom;
+    private SolidColorBrush? _plateBorder;
+    private Color _plateTopColor;
+    private Color _plateBottomColor;
+    private Color _plateBorderColor;
 
     public MainWindow(MainViewModel vm, AppConfig config)
     {
@@ -62,30 +73,48 @@ public partial class MainWindow : Window
 
         if (strength <= 0.005)
         {
-            Root.Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0));
+            Root.Background = ClickThrough;
             Root.BorderThickness = new Thickness(0);
             Root.CornerRadius = new CornerRadius(0);
             return;
         }
 
-        var top = ThemePalette.Parse(palette.BgTop);
-        var bottom = ThemePalette.Parse(palette.BgBottom);
+        // Build the plate once per theme, then only mutate the alpha values while
+        // the backdrop slider moves. This avoids a new brush per slider tick.
+        if (_plate == null || _backdropTheme != ThemeManager.Current)
+        {
+            _backdropTheme = ThemeManager.Current;
+            _plateTopColor = ThemePalette.Parse(palette.BgTop);
+            _plateBottomColor = ThemePalette.Parse(palette.BgBottom);
+            _plateBorderColor = ThemePalette.Parse(palette.Border);
+
+            _plateTop = new GradientStop(WithAlpha(_plateTopColor, 255), 0);
+            _plateBottom = new GradientStop(WithAlpha(_plateBottomColor, 255), 1);
+            _plate = new LinearGradientBrush(new GradientStopCollection { _plateTop, _plateBottom },
+                new Point(0, 0), new Point(0.55, 1));
+            _plateBorder = new SolidColorBrush(WithAlpha(_plateBorderColor, 255));
+        }
+
         byte alpha = (byte)Math.Round(255 * strength);
-        top.A = alpha;
-        bottom.A = alpha;
+        _plateTop!.Color = WithAlpha(_plateTopColor, alpha);
+        _plateBottom!.Color = WithAlpha(_plateBottomColor, alpha);
+        _plateBorder!.Color = WithAlpha(_plateBorderColor, (byte)Math.Min(255, 150 + 105 * strength));
 
-        var plate = new LinearGradientBrush(top, bottom, new Point(0, 0), new Point(0.55, 1));
-        plate.Freeze();
-        Root.Background = plate;
-
-        var borderColor = ThemePalette.Parse(palette.Border);
-        borderColor.A = (byte)Math.Min(255, 150 + 105 * strength);
-        var border = new SolidColorBrush(borderColor);
-        border.Freeze();
-        Root.BorderBrush = border;
+        Root.Background = _plate;
+        Root.BorderBrush = _plateBorder;
         Root.BorderThickness = new Thickness(1);
         Root.CornerRadius = new CornerRadius(12);
     }
+
+    private static SolidColorBrush CreateClickThrough()
+    {
+        var brush = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0));
+        brush.Freeze();
+        return brush;
+    }
+
+    private static Color WithAlpha(Color color, byte alpha)
+        => Color.FromArgb(alpha, color.R, color.G, color.B);
 
     private void ApplyWorkAreaLimits()
     {

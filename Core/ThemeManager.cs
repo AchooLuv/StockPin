@@ -1,4 +1,4 @@
-namespace StockPin.Core;
+﻿namespace StockPin.Core;
 
 using System.Windows.Media.Effects;
 
@@ -11,7 +11,6 @@ public static class ThemeManager
     {
         // 主题一：蓝调（深色）
         new ThemePalette(
-            index: 0,
             name: "蓝调",
             note: "深色 · 静谧",
             isDark: true,
@@ -39,7 +38,6 @@ public static class ThemeManager
 
         // 主题二：深海（深色，默认）
         new ThemePalette(
-            index: 1,
             name: "深海",
             note: "深色 · 沉静",
             isDark: true,
@@ -67,7 +65,6 @@ public static class ThemeManager
 
         // 主题三：暮紫（深色）
         new ThemePalette(
-            index: 2,
             name: "暮紫",
             note: "深色 · 温柔",
             isDark: true,
@@ -95,7 +92,6 @@ public static class ThemeManager
 
         // 主题四：雾灰（浅色）
         new ThemePalette(
-            index: 3,
             name: "雾灰",
             note: "浅色 · 柔和",
             isDark: false,

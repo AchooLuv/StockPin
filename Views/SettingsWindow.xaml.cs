@@ -1,5 +1,7 @@
 namespace StockPin.Views;
 
+using System.Windows.Media.Animation;
+
 public partial class SettingsWindow : Window
 {
     private const string DragFormat = "StockPin.StockEntry";
@@ -288,7 +290,78 @@ public partial class SettingsWindow : Window
         var container = FindAncestor<ListBoxItem>(e.OriginalSource as DependencyObject);
         if (container?.DataContext is StockEntry target) index = stocks.IndexOf(target);
 
+        int from = stocks.IndexOf(source);
+        if (from < 0 || from == index) return;
+
+        // Capture where every realised row is now, move the item, then slide the
+        // rows from their previous Y to the new layout position.
+        ResetRowTransforms();
+        var positions = CaptureRowPositions();
+
         App.Current.Vm.MoveStock(source, index);
+        AnimateReorder(positions);
+        e.Handled = true;
+    }
+
+    private void Handle_GiveFeedback(object sender, GiveFeedbackEventArgs e)
+    {
+        // Keep the four-way "move" cursor for the whole drag, not the default arrow.
+        e.UseDefaultCursors = false;
+        Mouse.SetCursor(Cursors.SizeAll);
+        e.Handled = true;
+    }
+
+    private void ResetRowTransforms()
+    {
+        foreach (var entry in App.Current.Vm.Stocks)
+        {
+            if (StockList.ItemContainerGenerator.ContainerFromItem(entry) is ListBoxItem item &&
+                item.RenderTransform is TranslateTransform transform)
+            {
+                transform.BeginAnimation(TranslateTransform.YProperty, null);
+                transform.Y = 0;
+            }
+        }
+    }
+
+    private Dictionary<StockEntry, double> CaptureRowPositions()
+    {
+        var positions = new Dictionary<StockEntry, double>();
+        foreach (var entry in App.Current.Vm.Stocks)
+        {
+            if (StockList.ItemContainerGenerator.ContainerFromItem(entry) is ListBoxItem item)
+                positions[entry] = item.TranslatePoint(new Point(0, 0), StockList).Y;
+        }
+        return positions;
+    }
+
+    private void AnimateReorder(IReadOnlyDictionary<StockEntry, double> oldPositions)
+    {
+        if (!SystemParameters.ClientAreaAnimation) return;
+
+        StockList.UpdateLayout();
+
+        foreach (var entry in App.Current.Vm.Stocks)
+        {
+            if (!oldPositions.TryGetValue(entry, out double oldY)) continue;
+            if (StockList.ItemContainerGenerator.ContainerFromItem(entry) is not ListBoxItem item) continue;
+
+            double newY = item.TranslatePoint(new Point(0, 0), StockList).Y;
+            double offset = oldY - newY;
+            if (Math.Abs(offset) < 0.5) continue;
+
+            if (item.RenderTransform is not TranslateTransform transform)
+            {
+                transform = new TranslateTransform();
+                item.RenderTransform = transform;
+            }
+
+            transform.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(offset, 0, TimeSpan.FromMilliseconds(180))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                });
+        }
     }
 
     private static T? FindAncestor<T>(DependencyObject? source) where T : DependencyObject

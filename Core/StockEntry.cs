@@ -74,10 +74,7 @@ public sealed class StockEntry : ObservableObject
     public int Qty
     {
         get => _qty;
-        set
-        {
-            if (Set(ref _qty, Math.Max(0, value))) OnPropertyChanged(nameof(HasPosition));
-        }
+        set => Set(ref _qty, Math.Max(0, value));
     }
 
     public double Cost
@@ -85,8 +82,6 @@ public sealed class StockEntry : ObservableObject
         get => _cost;
         set => Set(ref _cost, Math.Max(0, value));
     }
-
-    public bool HasPosition => _qty > 0 && _cost > 0;
 
     /// <summary>
     /// Live-edited text. The raw string is kept so the caret never jumps, and the

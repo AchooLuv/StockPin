@@ -6,7 +6,7 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-5b6ea8?style=flat-square)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-5b6ea8?style=flat-square)](LICENSE)
 
-![StockPin](docs/hero.png?v=1.1.8)
+![StockPin](docs/hero.png?v=1.1.9)
 
 ## 功能
 
@@ -46,7 +46,7 @@
 5. **设置 → 自选股票**：输入代码或名称添加；填好数量和成本价后，面板会立即更新模拟持仓。
 6. 点 **×** 只是收进托盘；托盘图标右键可再次显示面板或退出。
 
-![设置](docs/settings.png?v=1.1.8)
+![设置](docs/settings.png?v=1.1.9)
 
 ## 主题
 
@@ -54,7 +54,7 @@
 
 > 面板背景强度默认 70%：既能透出桌面，又能保证在游戏、视频等复杂画面上看清。喜欢纯文字可以把「外观 → 背景强度」拉到 0%。
 
-![主题](docs/appearance.png?v=1.1.8)
+![主题](docs/appearance.png?v=1.1.9)
 
 ## 数据来源
 

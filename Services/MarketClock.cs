@@ -77,9 +77,6 @@ public static class MarketClock
         return (since is >= 0 and <= 15) || IsTrading(market, now, heartbeat);
     }
 
-    public static bool IsOpen(string market, DateTimeOffset now)
-        => MinutesSinceSessionStart(market, now) >= 0;
-
     /// <summary>Minutes until the 09:30 open; int.MaxValue on weekends.</summary>
     public static int MinutesUntilOpen(string market, DateTimeOffset now)
     {

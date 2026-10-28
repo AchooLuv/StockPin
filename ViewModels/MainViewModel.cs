@@ -10,7 +10,6 @@ public sealed class MainViewModel : ObservableObject
     private bool _paused;
     private string _statusText = "";
     private bool _hasError;
-    private string _lastUpdateText = "";
     private int _intervalSec;
     private bool _showCode;
 
@@ -57,11 +56,7 @@ public sealed class MainViewModel : ObservableObject
             Persist();
         }
 
-        Stocks.CollectionChanged += (_, _) =>
-        {
-            OnPropertyChanged(nameof(IsEmpty));
-            OnPropertyChanged(nameof(HasStocks));
-        };
+        Stocks.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsEmpty));
 
         RecalcPortfolio();
 
@@ -73,7 +68,6 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<StockEntry> Stocks { get; } = new();
 
     public bool IsEmpty => Stocks.Count == 0;
-    public bool HasStocks => Stocks.Count > 0;
 
     public bool HasPortfolio { get => _hasPortfolio; private set => Set(ref _hasPortfolio, value); }
     public string PortfolioValueText { get => _portfolioValueText; private set => Set(ref _portfolioValueText, value); }
@@ -87,7 +81,6 @@ public sealed class MainViewModel : ObservableObject
 
     public bool HasError { get => _hasError; private set => Set(ref _hasError, value); }
     public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
-    public string LastUpdateText { get => _lastUpdateText; private set => Set(ref _lastUpdateText, value); }
 
     public bool ShowCode
     {
@@ -129,7 +122,6 @@ public sealed class MainViewModel : ObservableObject
         RecalcPortfolio();
         UpdateTimerInterval();
         OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(HasStocks));
     }
 
     public void MoveStock(StockEntry entry, int toIndex)
@@ -182,7 +174,6 @@ public sealed class MainViewModel : ObservableObject
         }
 
         RecalcPortfolio();
-        LastUpdateText = $"行情更新于 {DateTime.Now:HH:mm:ss}";
     }
 
     // ------------------------------------------------------------------ polling
@@ -336,7 +327,6 @@ public sealed class MainViewModel : ObservableObject
 
             RecalcPortfolio();
             SetStatus("");
-            LastUpdateText = $"行情更新于 {DateTime.Now:HH:mm:ss}";
         }
         catch (Exception ex)
         {
