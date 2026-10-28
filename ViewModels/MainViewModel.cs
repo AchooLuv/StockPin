@@ -124,15 +124,17 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsEmpty));
     }
 
-    public void MoveStock(StockEntry entry, int toIndex)
+    public void MoveStock(StockEntry entry, int toIndex, bool persist = true)
     {
         int from = Stocks.IndexOf(entry);
         if (from < 0) return;
         toIndex = Math.Clamp(toIndex, 0, Stocks.Count - 1);
         if (from == toIndex) return;
         Stocks.Move(from, toIndex);
-        Persist();
+        if (persist) Persist();
     }
+
+    public void PersistOrder() => Persist();
 
     public void MoveStockBy(StockEntry entry, int delta)
     {

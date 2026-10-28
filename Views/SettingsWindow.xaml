@@ -32,7 +32,8 @@
         </Style>
     </Window.Resources>
 
-    <Border Margin="10" CornerRadius="16" Background="{DynamicResource WindowBg}"
+    <AdornerDecorator>
+    <Border x:Name="RootCard" Margin="10" CornerRadius="16" Background="{DynamicResource WindowBg}"
             BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1">
         <Border.Effect>
             <DropShadowEffect BlurRadius="22" ShadowDepth="0" Opacity="0.45" Color="Black" />
@@ -161,9 +162,10 @@
                     </Grid>
 
                     <ListBox x:Name="StockList" Grid.Row="3" ItemsSource="{Binding Stocks}" Background="Transparent"
-                             BorderThickness="0" SelectionMode="Single" AllowDrop="True"
+                             BorderThickness="0" SelectionMode="Single"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             DragOver="StockList_DragOver" Drop="StockList_Drop">
+                             PreviewMouseMove="StockList_PreviewMouseMove"
+                             PreviewMouseLeftButtonUp="StockList_PreviewMouseLeftButtonUp">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -204,9 +206,7 @@
                                     <Border Grid.Column="0" Width="22" Height="22" CornerRadius="6"
                                             HorizontalAlignment="Left" VerticalAlignment="Center"
                                             Cursor="SizeAll" ToolTip="按住拖动排序"
-                                            PreviewMouseLeftButtonDown="Handle_PreviewMouseLeftButtonDown"
-                                            MouseMove="Handle_MouseMove"
-                                            GiveFeedback="Handle_GiveFeedback">
+                                            PreviewMouseLeftButtonDown="Handle_PreviewMouseLeftButtonDown">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="Transparent" />
@@ -441,4 +441,5 @@
             </Grid>
         </Grid>
     </Border>
+    </AdornerDecorator>
 </Window>
