@@ -32,8 +32,7 @@
         </Style>
     </Window.Resources>
 
-    <AdornerDecorator>
-    <Border x:Name="RootCard" Margin="10" CornerRadius="16" Background="{DynamicResource WindowBg}"
+    <Border Margin="10" CornerRadius="16" Background="{DynamicResource WindowBg}"
             BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1">
         <Border.Effect>
             <DropShadowEffect BlurRadius="22" ShadowDepth="0" Opacity="0.45" Color="Black" />
@@ -184,6 +183,20 @@
                                                     <Setter TargetName="Bd" Property="Background"
                                                             Value="{DynamicResource Surface}" />
                                                 </Trigger>
+                                                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
+                                                             Value="dragging">
+                                                    <Setter TargetName="Bd" Property="Background"
+                                                            Value="{DynamicResource CardBg}" />
+                                                    <Setter TargetName="Bd" Property="BorderBrush"
+                                                            Value="{DynamicResource PanelBorder}" />
+                                                    <Setter TargetName="Bd" Property="BorderThickness" Value="1" />
+                                                    <Setter TargetName="Bd" Property="Effect">
+                                                        <Setter.Value>
+                                                            <DropShadowEffect BlurRadius="16" ShadowDepth="3"
+                                                                              Direction="270" Opacity="0.4" Color="Black" />
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </DataTrigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Setter.Value>
@@ -441,5 +454,4 @@
             </Grid>
         </Grid>
     </Border>
-    </AdornerDecorator>
 </Window>

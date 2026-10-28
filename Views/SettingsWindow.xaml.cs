@@ -1,8 +1,6 @@
 namespace StockPin.Views;
 
-using System.Windows.Documents;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Effects;
 
 public partial class SettingsWindow : Window
 {
@@ -12,10 +10,7 @@ public partial class SettingsWindow : Window
     private Point _dragStart;
     private bool _dragArmed;
     private bool _dragging;
-    private ListBoxItem? _dragSourceItem;
-    private DragGhostAdorner? _ghostAdorner;
-    private AdornerLayer? _ghostLayer;
-    private Point _grabOffset;
+    private double _dragGrabY;
     private int _dragOriginalIndex = -1;
     private CancellationTokenSource? _searchCts;
 
@@ -267,7 +262,7 @@ public partial class SettingsWindow : Window
         if (sender is not FrameworkElement { DataContext: StockEntry entry }) return;
 
         _dragEntry = entry;
-        _dragStart = e.GetPosition(RootCard);
+        _dragStart = e.GetPosition(StockList);
         _dragOriginalIndex = App.Current.Vm.Stocks.IndexOf(entry);
         _dragArmed = true;
         Mouse.Capture(StockList, CaptureMode.Element);
@@ -285,11 +280,11 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        var cardPoint = e.GetPosition(RootCard);
+        var listPoint = e.GetPosition(StockList);
         if (!_dragging)
         {
-            if (Math.Abs(cardPoint.X - _dragStart.X) < 4 &&
-                Math.Abs(cardPoint.Y - _dragStart.Y) < 4) return;
+            if (Math.Abs(listPoint.X - _dragStart.X) < 4 &&
+                Math.Abs(listPoint.Y - _dragStart.Y) < 4) return;
 
             if (!BeginDrag())
             {
@@ -298,7 +293,7 @@ public partial class SettingsWindow : Window
             }
         }
 
-        UpdateDrag(cardPoint, e.GetPosition(StockList));
+        UpdateDrag(listPoint);
         e.Handled = true;
     }
 
@@ -317,65 +312,21 @@ public partial class SettingsWindow : Window
         if (_dragEntry == null) return false;
         if (StockList.ItemContainerGenerator.ContainerFromItem(_dragEntry) is not ListBoxItem item) return false;
 
-        var layer = AdornerLayer.GetAdornerLayer(RootCard);
-        if (layer == null) return false;
-
         ResetRowTransforms();
 
-        var itemOrigin = item.TranslatePoint(new Point(0, 0), RootCard);
-        _grabOffset = new Point(_dragStart.X - itemOrigin.X, _dragStart.Y - itemOrigin.Y);
+        MarkDragging(item, true);
+        var transform = EnsureTransform(item);
+        transform.Y = 0;
+        _dragGrabY = _dragStart.Y - RowTop(item);
 
-        _ghostAdorner = new DragGhostAdorner(RootCard, CreateGhost(item));
-        _ghostLayer = layer;
-        layer.Add(_ghostAdorner);
-
-        _dragSourceItem = item;
-        item.Opacity = 0.18;
         _dragging = true;
         Mouse.OverrideCursor = Cursors.SizeAll;
-
-        _ghostAdorner.MoveTo(itemOrigin);
         return true;
     }
 
-    private UIElement CreateGhost(ListBoxItem item)
+    private void UpdateDrag(Point listPoint)
     {
-        return new Border
-        {
-            Width = item.ActualWidth,
-            Height = item.ActualHeight,
-            CornerRadius = new CornerRadius(8),
-            Background = TryFindResource("CardBg") as Brush ?? Brushes.Black,
-            BorderBrush = TryFindResource("PanelBorder") as Brush,
-            BorderThickness = new Thickness(1),
-            IsHitTestVisible = false,
-            Child = new Image { Source = Snapshot(item), Stretch = Stretch.Fill },
-            Effect = new DropShadowEffect
-            {
-                BlurRadius = 16,
-                ShadowDepth = 3,
-                Direction = 270,
-                Opacity = 0.4,
-                Color = Colors.Black
-            }
-        };
-    }
-
-    private static ImageSource Snapshot(FrameworkElement element)
-    {
-        var dpi = VisualTreeHelper.GetDpi(element);
-        int width = Math.Max(1, (int)Math.Ceiling(element.ActualWidth * dpi.DpiScaleX));
-        int height = Math.Max(1, (int)Math.Ceiling(element.ActualHeight * dpi.DpiScaleY));
-
-        var bitmap = new RenderTargetBitmap(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
-        bitmap.Render(element);
-        bitmap.Freeze();
-        return bitmap;
-    }
-
-    private void UpdateDrag(Point cardPoint, Point listPoint)
-    {
-        _ghostAdorner?.MoveTo(new Point(cardPoint.X - _grabOffset.X, cardPoint.Y - _grabOffset.Y));
+        ApplyDragTransform(listPoint.Y);
 
         var stocks = App.Current.Vm.Stocks;
         var entry = _dragEntry;
@@ -405,16 +356,32 @@ public partial class SettingsWindow : Window
         var positions = CaptureRowPositions();
         App.Current.Vm.MoveStock(entry, target, persist: false);
         AnimateReorder(positions, entry, 120);
+        ApplyDragTransform(listPoint.Y);
+    }
 
-        if (StockList.ItemContainerGenerator.ContainerFromItem(entry) is ListBoxItem moved)
-        {
-            moved.Opacity = 0.18;
-            if (moved.RenderTransform is TranslateTransform transform)
-            {
-                transform.BeginAnimation(TranslateTransform.YProperty, null);
-                transform.Y = 0;
-            }
-        }
+    private void ApplyDragTransform(double mouseY)
+    {
+        if (_dragEntry == null) return;
+        if (StockList.ItemContainerGenerator.ContainerFromItem(_dragEntry) is not ListBoxItem item) return;
+
+        MarkDragging(item, true);
+        var transform = EnsureTransform(item);
+        transform.BeginAnimation(TranslateTransform.YProperty, null);
+        transform.Y = mouseY - RowTop(item) - _dragGrabY;
+    }
+
+    private static void MarkDragging(ListBoxItem item, bool active)
+    {
+        item.Tag = active ? "dragging" : null;
+        Panel.SetZIndex(item, active ? 1000 : 0);
+    }
+
+    private static TranslateTransform EnsureTransform(UIElement item)
+    {
+        if (item.RenderTransform is TranslateTransform transform) return transform;
+        transform = new TranslateTransform();
+        item.RenderTransform = transform;
+        return transform;
     }
 
     private void EndDrag(bool persist)
@@ -431,31 +398,33 @@ public partial class SettingsWindow : Window
         _dragging = false;
         Mouse.OverrideCursor = null;
 
-        if (_ghostLayer != null && _ghostAdorner != null)
-            _ghostLayer.Remove(_ghostAdorner);
-        _ghostAdorner = null;
-        _ghostLayer = null;
-
-        if (_dragSourceItem != null) _dragSourceItem.Opacity = 1;
-
         if (_dragEntry != null &&
             StockList.ItemContainerGenerator.ContainerFromItem(_dragEntry) is ListBoxItem item)
         {
-            item.Opacity = 1;
+            MarkDragging(item, false);
             if (item.RenderTransform is TranslateTransform transform)
             {
-                transform.BeginAnimation(TranslateTransform.YProperty, null);
-                transform.Y = 0;
+                double offset = transform.Y;
+                if (Math.Abs(offset) > 0.5 && SystemParameters.ClientAreaAnimation)
+                {
+                    transform.BeginAnimation(TranslateTransform.YProperty,
+                        new DoubleAnimation(offset, 0, TimeSpan.FromMilliseconds(120))
+                        {
+                            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                        });
+                }
+                else
+                {
+                    transform.BeginAnimation(TranslateTransform.YProperty, null);
+                    transform.Y = 0;
+                }
             }
-            item.BeginAnimation(UIElement.OpacityProperty,
-                new DoubleAnimation(0.18, 1, TimeSpan.FromMilliseconds(120)));
         }
 
         Mouse.Capture(null);
         if (persist) App.Current.Vm.PersistOrder();
 
         _dragEntry = null;
-        _dragSourceItem = null;
         _dragOriginalIndex = -1;
     }
 
