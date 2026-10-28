@@ -368,7 +368,7 @@ public partial class App : Application
             {
                 new() { SecId = "1.601872", Code = "601872", Name = "招商轮船", Market = MarketKind.A, Qty = 2000, Cost = 19.85 },
                 new() { SecId = "116.00700", Code = "00700", Name = "腾讯控股", Market = MarketKind.HK, Qty = 100, Cost = 388.00 },
-                new() { SecId = "106.FRO", Code = "FRO", Name = "Frontline", Market = MarketKind.US, Qty = 300, Cost = 48.00 },
+                new() { SecId = "106.ECO", Code = "ECO", Name = "Okeanis Eco Tankers Corp.", Market = MarketKind.US },
                 new() { SecId = "105.AAPL", Code = "AAPL", Name = "苹果", Market = MarketKind.US, Qty = 20, Cost = 330.00 },
                 new() { SecId = "0.300750", Code = "300750", Name = "宁德时代", Market = MarketKind.A }
             }

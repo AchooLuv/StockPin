@@ -166,7 +166,7 @@ public sealed class MainViewModel : ObservableObject
         {
             ["1.601872"] = (17.61, 17.58, 17.60, 17.72, 17.55),
             ["116.00700"] = (393.80, 410.40, 408.20, 409.00, 391.50),
-            ["106.FRO"] = (50.32, 50.72, 50.24, 51.32, 49.03),
+            ["106.ECO"] = (98.05, 92.91, 0, 0, 0),
             ["105.AAPL"] = (339.50, 343.00, 342.10, 344.20, 338.60),
             ["0.300750"] = (268.40, 264.10, 265.00, 270.20, 263.50)
         };
@@ -175,7 +175,8 @@ public sealed class MainViewModel : ObservableObject
         {
             if (!samples.TryGetValue(entry.SecId, out var s)) continue;
             double pct = s.Prev > 0 ? (s.Price - s.Prev) / s.Prev * 100 : 0;
-            string session = MarketClock.StatusText(MarketClock.Phase(entry.Market, now), false);
+            // Deterministic preview: A/HK closed, US in pre-market (shows the 盘前 label).
+            string session = entry.Market == MarketKind.US ? "盘前" : "已收盘";
             entry.ApplyQuote(new Quote(entry.SecId, entry.Code, entry.Name, s.Price, s.Prev, pct,
                 s.Price - s.Prev, s.Open, s.High, s.Low, now, true), false, session);
         }
