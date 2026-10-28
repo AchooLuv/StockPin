@@ -3,6 +3,7 @@ namespace StockPin.Services;
 public enum SessionPhase
 {
     PreOpen,
+    Premarket,
     Trading,
     Lunch,
     PostClose,
@@ -42,7 +43,9 @@ public static class MarketClock
                 : minutes < 780 ? SessionPhase.Lunch
                 : minutes < 960 ? SessionPhase.Trading
                 : SessionPhase.PostClose,
-            _ => minutes < 570 ? SessionPhase.PreOpen
+            // US pre-market runs 04:00–09:30 ET (04:00 = 240 minutes).
+            _ => minutes < 240 ? SessionPhase.PreOpen
+                : minutes < 570 ? SessionPhase.Premarket
                 : minutes < 960 ? SessionPhase.Trading
                 : SessionPhase.PostClose
         };
@@ -52,6 +55,7 @@ public static class MarketClock
     public static string StatusText(SessionPhase phase, bool trading) => trading ? "" : phase switch
     {
         SessionPhase.PreOpen => "未开盘",
+        SessionPhase.Premarket => "盘前",
         SessionPhase.Lunch => "午间休市",
         SessionPhase.PostClose => "已收盘",
         _ => "休市"
@@ -65,6 +69,7 @@ public static class MarketClock
     public static bool ShouldPoll(string market, DateTimeOffset now, DateTimeOffset? heartbeat)
     {
         var phase = Phase(market, now);
+        if (phase == SessionPhase.Premarket) return true;   // pre-market quotes update all morning
         if (phase == SessionPhase.PreOpen) return MinutesUntilOpen(market, now) <= 30;
         if (phase != SessionPhase.Trading) return false;
 

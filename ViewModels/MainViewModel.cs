@@ -18,6 +18,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly Dictionary<string, bool> _prevActive = new(StringComparer.Ordinal);
     private bool _forceAll = true;
     private bool _anyTrading;
+    private bool _anyPremarket;
     private bool _anyWarmup;
     private bool _anyLunch;
     private int _failStreak;
@@ -205,7 +206,7 @@ public sealed class MainViewModel : ObservableObject
         if (_busy) return;
         if (Stocks.Count == 0)
         {
-            _anyTrading = _anyWarmup = _anyLunch = false;
+            _anyTrading = _anyPremarket = _anyWarmup = _anyLunch = false;
             _failStreak = 0;
             UpdateTimerInterval();
             RecalcPortfolio();
@@ -220,6 +221,7 @@ public sealed class MainViewModel : ObservableObject
             var phases = new Dictionary<string, SessionPhase>(StringComparer.Ordinal);
             var active = new Dictionary<string, bool>(StringComparer.Ordinal);
             var warmup = new Dictionary<string, bool>(StringComparer.Ordinal);
+            var premarket = new Dictionary<string, bool>(StringComparer.Ordinal);
 
             foreach (var market in markets)
             {
@@ -232,9 +234,11 @@ public sealed class MainViewModel : ObservableObject
 
                 active[market] = isActive;
                 warmup[market] = isWarmup;
+                premarket[market] = isActive && phase == SessionPhase.Premarket;
             }
 
-            _anyTrading = markets.Any(m => active[m] && !warmup[m]);
+            _anyTrading = markets.Any(m => active[m] && phases[m] == SessionPhase.Trading);
+            _anyPremarket = markets.Any(m => premarket[m]);
             _anyWarmup = markets.Any(m => warmup[m]);
             _anyLunch = markets.Any(m => phases[m] == SessionPhase.Lunch);
 
@@ -272,6 +276,23 @@ public sealed class MainViewModel : ObservableObject
             {
                 if (quotes.TryGetValue(MarketClock.ProbeSecId(market), out var probe) && probe.HasData)
                     _heartbeats[market] = probe.UpdatedAt;
+            }
+
+            // Tencent only has the last US close; overlay Sina's pre-market quote during 04:00–09:30 ET.
+            if (_anyPremarket)
+            {
+                var usIds = Stocks.Where(s => s.Market == MarketKind.US)
+                    .Select(s => s.SecId)
+                    .Append(MarketClock.ProbeSecId(MarketKind.US))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+
+                var premarketQuotes = await _quotes.FetchUsPreMarketAsync(usIds, CancellationToken.None)
+                    .ConfigureAwait(true);
+                foreach (var item in premarketQuotes) quotes[item.Key] = item.Value;
+
+                if (quotes.TryGetValue(MarketClock.ProbeSecId(MarketKind.US), out var usProbe) && usProbe.HasData)
+                    _heartbeats[MarketKind.US] = usProbe.UpdatedAt;
             }
 
             if (fetchSet.Count > 0 && Stocks.Any(s => s.Qty > 0 && s.Market != MarketKind.A))
@@ -331,9 +352,11 @@ public sealed class MainViewModel : ObservableObject
 
     private void UpdateTimerInterval()
     {
-        // Trading markets: user interval. Pre-open warm-up: 10s. Lunch: 30s. Otherwise idle at 60s.
+        // Trading markets: user interval. US pre-market: at least 10s. Pre-open warm-up: 10s.
+        // Lunch: 30s. Otherwise idle at 60s.
         int seconds;
         if (_anyTrading) seconds = Math.Max(1, _intervalSec);
+        else if (_anyPremarket) seconds = Math.Max(10, _intervalSec);
         else if (_anyWarmup) seconds = Math.Max(10, _intervalSec);
         else if (_anyLunch) seconds = 30;
         else seconds = 60;

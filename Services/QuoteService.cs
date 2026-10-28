@@ -76,6 +76,50 @@ public sealed class QuoteService : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// US pre-market quotes from Sina. Tencent's US quote only carries the last regular
+    /// close, while Sina exposes the 04:00–09:30 ET pre-market price in fields 22–24.
+    /// </summary>
+    public async Task<Dictionary<string, Quote>> FetchUsPreMarketAsync(IEnumerable<string> secIds, CancellationToken ct)
+    {
+        var result = new Dictionary<string, Quote>(StringComparer.Ordinal);
+        var symbolToSecId = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var secId in secIds)
+        {
+            var symbol = ToSinaUsSymbol(secId);
+            if (symbol == null || symbolToSecId.ContainsKey(symbol)) continue;
+            symbolToSecId[symbol] = secId;
+        }
+
+        if (symbolToSecId.Count == 0) return result;
+
+        var text = await GetTextAsync(SinaUrl + string.Join(",", symbolToSecId.Keys),
+            "https://finance.sina.com.cn", ct).ConfigureAwait(false);
+        if (string.IsNullOrEmpty(text)) return result;
+
+        foreach (var rawLine in text.Split('\n'))
+        {
+            var line = rawLine.Trim();
+            int marker = line.IndexOf("hq_str_", StringComparison.Ordinal);
+            if (marker < 0) continue;
+
+            int equals = line.IndexOf('=', marker);
+            if (equals < 0) continue;
+
+            var symbol = line[(marker + 7)..equals];
+            if (!symbolToSecId.TryGetValue(symbol, out var secId)) continue;
+
+            var payload = line[(equals + 1)..].Trim().TrimEnd(';').Trim('"');
+            if (payload.Length == 0) continue;
+
+            var quote = ParseSinaUsPreMarket(secId, payload.Split(','));
+            if (quote != null) result[secId] = quote;
+        }
+
+        return result;
+    }
+
     /// <summary>USD/CNH and HKD/CNH, used to convert a mixed portfolio to CNY.</summary>
     public async Task<(double Usd, double Hkd)> FetchRatesAsync(CancellationToken ct)
     {
@@ -242,6 +286,48 @@ public sealed class QuoteService : IDisposable
             "105" or "106" or "107" => "us" + code,
             _ => null
         };
+    }
+
+    private static string? ToSinaUsSymbol(string secId)
+    {
+        int dot = secId.IndexOf('.');
+        if (dot <= 0 || dot == secId.Length - 1) return null;
+
+        var prefix = secId[..dot];
+        if (prefix is not ("105" or "106" or "107")) return null;
+
+        return "gb_" + secId[(dot + 1)..].ToLowerInvariant();
+    }
+
+    private static Quote? ParseSinaUsPreMarket(string secId, string[] f)
+    {
+        // 1 regular price · 2 regular % · 3 update time · 4 regular change
+        // 21 pre-market price · 22 pre-market % · 23 pre-market change · 24 pre-market time
+        // 26 previous close
+        if (f.Length < 27) return null;
+
+        double prePrice = ParseNum(f[21]);
+        double price = prePrice > 0 ? prePrice : ParseNum(f[1]);
+        if (price <= 0) return null;
+
+        double prevClose = ParseNum(f[26]);
+        if (prevClose <= 0) prevClose = ParseNum(f[1]) - ParseNum(f[4]);
+
+        double changePct = prePrice > 0 ? ParseNum(f[22]) : ParseNum(f[2]);
+        double changeAmt = prePrice > 0 ? ParseNum(f[23]) : ParseNum(f[4]);
+        if (Math.Abs(changePct) < 0.00001 && prevClose > 0)
+            changePct = (price - prevClose) / prevClose * 100;
+
+        DateTimeOffset updated = DateTimeOffset.Now;
+        if (DateTime.TryParseExact(f[3].Trim(), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var beijing))
+            updated = new DateTimeOffset(beijing, TimeSpan.FromHours(8));
+
+        int dot = secId.IndexOf('.');
+        var code = dot >= 0 ? secId[(dot + 1)..] : "";
+
+        // Name left empty so the Chinese name saved when the stock was added is kept.
+        return new Quote(secId, code, "", price, prevClose, changePct, changeAmt, 0, 0, 0, updated, true);
     }
 
     private static DateTimeOffset ParseTime(string raw, string market)

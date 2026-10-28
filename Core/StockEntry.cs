@@ -166,12 +166,24 @@ public sealed class StockEntry : ObservableObject
         {
             if (!_hasQuote)
                 return $"{MarketLabel} · {Code}\n暂无行情数据";
+
             var local = _updatedAt.ToLocalTime();
-            return string.Join("\n",
-                $"{MarketLabel} · {Code}",
-                $"昨收 {Format(_prevClose, Decimals)}    今开 {Format(_open, Decimals)}",
-                $"最高 {Format(_high, Decimals)}    最低 {Format(_low, Decimals)}",
-                $"{(IsOpen ? "交易中" : "休市")} · 更新于 {local:MM-dd HH:mm:ss}");
+            var lines = new List<string> { $"{MarketLabel} · {Code}" };
+
+            if (_open > 0 || _high > 0 || _low > 0)
+            {
+                lines.Add($"昨收 {Format(_prevClose, Decimals)}    今开 {Format(_open, Decimals)}");
+                lines.Add($"最高 {Format(_high, Decimals)}    最低 {Format(_low, Decimals)}");
+            }
+            else
+            {
+                // Pre-market quotes have no regular-session OHLC yet.
+                lines.Add($"昨收 {Format(_prevClose, Decimals)}");
+            }
+
+            var state = _sessionText.Length > 0 ? _sessionText : IsOpen ? "交易中" : "休市";
+            lines.Add($"{state} · 更新于 {local:MM-dd HH:mm:ss}");
+            return string.Join("\n", lines);
         }
     }
 
