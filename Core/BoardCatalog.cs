@@ -1,6 +1,6 @@
 namespace StockPin.Core;
 
-/// <summary>Maps a stock to its market board and that board's index.</summary>
+/// <summary>Maps a stock to its market board and the indices shown in the header.</summary>
 public static class BoardCatalog
 {
     public const string ShanghaiMain = "上证指数";
@@ -8,8 +8,8 @@ public static class BoardCatalog
     public const string ChiNext = "创业板指";
     public const string Star = "科创50";
     public const string Beijing = "北证50";
-    public const string HongKong = "恒生指数";
-    public const string UnitedStates = "标普500";
+    public const string HongKong = "港股";
+    public const string UnitedStates = "美股";
 
     public static string Name(string market, string code)
     {
@@ -29,16 +29,20 @@ public static class BoardCatalog
         return ShanghaiMain;
     }
 
-    /// <summary>Index used for the board header (Tencent secid).</summary>
-    public static string? IndexSecId(string board) => board switch
+    /// <summary>Only A-share boards are split into industry sectors.</summary>
+    public static bool HasSectors(string board) => board is
+        ShanghaiMain or ShenzhenMain or ChiNext or Star or Beijing;
+
+    /// <summary>Indices displayed next to the board (Tencent secid).</summary>
+    public static IReadOnlyList<(string Name, string SecId)> Indices(string board) => board switch
     {
-        ShanghaiMain => "1.000001",   // 上证指数
-        ShenzhenMain => "0.399001",   // 深证成指
-        ChiNext => "0.399006",        // 创业板指
-        Star => "1.000688",           // 科创50
-        Beijing => "0.899050",        // 北证50
-        HongKong => "116.HSI",        // 恒生指数
-        UnitedStates => "105.INX",    // 标普 500 指数
-        _ => null
+        ShanghaiMain => new[] { ("上证指数", "1.000001") },
+        ShenzhenMain => new[] { ("深证成指", "0.399001") },
+        ChiNext => new[] { ("创业板指", "0.399006") },
+        Star => new[] { ("科创50", "1.000688") },
+        Beijing => new[] { ("北证50", "0.899050") },
+        HongKong => new[] { ("恒生指数", "116.HSI") },
+        UnitedStates => new[] { ("纳指", "105.IXIC"), ("道指", "105.DJI") },
+        _ => Array.Empty<(string, string)>()
     };
 }

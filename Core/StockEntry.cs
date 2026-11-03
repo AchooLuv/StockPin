@@ -71,11 +71,13 @@ public sealed class StockEntry : ObservableObject
             if (!Set(ref _sector, text)) return;
             OnPropertyChanged(nameof(SectorName));
             OnPropertyChanged(nameof(HasSector));
+            OnPropertyChanged(nameof(ShowSector));
         }
     }
 
     public string SectorName => string.IsNullOrWhiteSpace(_sector) ? "未分类" : _sector;
     public bool HasSector => _sector.Length > 0;
+    public bool ShowSector => Market == MarketKind.A && _sector.Length > 0;
 
     public string BoardName => BoardCatalog.Name(Market, Code);
 

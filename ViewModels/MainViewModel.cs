@@ -36,8 +36,6 @@ public sealed class MainViewModel : ObservableObject
     private string _fxTooltip = "";
 
     private readonly Dictionary<string, double> _sectorChanges = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, double> _boardChanges = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, double> _boardPrices = new(StringComparer.Ordinal);
     private DateTimeOffset _lastSectorChangeLoad = DateTimeOffset.MinValue;
     private bool _sectorsLoading;
     private bool _sectorChangesLoading;
@@ -197,20 +195,30 @@ public sealed class MainViewModel : ObservableObject
         foreach (var b in boards)
         {
             var board = new BoardGroup(b.Name);
-            var sectors = b.Stocks.GroupBy(s => s.SectorName)
-                .Select(g => new
-                {
-                    Name = g.Key,
-                    Stocks = g.OrderBy(s => index[s]).ToList(),
-                    First = g.Min(s => index[s])
-                })
-                .OrderBy(g => g.First);
+            foreach (var item in BoardCatalog.Indices(b.Name))
+                board.Indices.Add(new BoardIndex(item.Name, item.SecId));
 
-            foreach (var sg in sectors)
+            if (BoardCatalog.HasSectors(b.Name))
             {
-                var sector = new SectorGroup(sg.Name);
-                foreach (var stock in sg.Stocks) sector.Stocks.Add(stock);
-                board.Sectors.Add(sector);
+                var sectors = b.Stocks.GroupBy(s => s.SectorName)
+                    .Select(g => new
+                    {
+                        Name = g.Key,
+                        Stocks = g.OrderBy(s => index[s]).ToList(),
+                        First = g.Min(s => index[s])
+                    })
+                    .OrderBy(g => g.First);
+
+                foreach (var sg in sectors)
+                {
+                    var sector = new SectorGroup(sg.Name);
+                    foreach (var stock in sg.Stocks) sector.Stocks.Add(stock);
+                    board.Sectors.Add(sector);
+                }
+            }
+            else
+            {
+                foreach (var stock in b.Stocks) board.Stocks.Add(stock);
             }
 
             Boards.Add(board);
@@ -219,11 +227,18 @@ public sealed class MainViewModel : ObservableObject
         DisplayGroups.Clear();
         foreach (var board in Boards)
         {
-            bool first = true;
-            foreach (var sector in board.Sectors)
+            if (board.Sectors.Count > 0)
             {
-                DisplayGroups.Add(new DisplayGroup(board, sector, first));
-                first = false;
+                bool first = true;
+                foreach (var sector in board.Sectors)
+                {
+                    DisplayGroups.Add(new DisplayGroup(board, sector, sector.Stocks, first));
+                    first = false;
+                }
+            }
+            else
+            {
+                DisplayGroups.Add(new DisplayGroup(board, null, board.Stocks, true));
             }
         }
 
@@ -234,20 +249,6 @@ public sealed class MainViewModel : ObservableObject
     {
         foreach (var board in Boards)
         {
-            if (_boardPrices.TryGetValue(board.Name, out double boardPrice)) board.SetPrice(boardPrice);
-            else board.ClearPrice();
-
-            if (_boardChanges.TryGetValue(board.Name, out double boardPct))
-            {
-                board.SetChange(boardPct);
-            }
-            else
-            {
-                var quoted = board.Sectors.SelectMany(s => s.Stocks).Where(s => s.HasQuote).ToList();
-                if (quoted.Count > 0) board.SetChange(quoted.Average(s => s.ChangePct));
-                else board.ClearChange();
-            }
-
             foreach (var sector in board.Sectors)
             {
                 if (_sectorChanges.TryGetValue(sector.Name, out double sectorPct))
@@ -268,7 +269,7 @@ public sealed class MainViewModel : ObservableObject
         if (_sectorsLoading) return;
 
         var missing = Stocks
-            .Where(s => string.IsNullOrWhiteSpace(s.Sector))
+            .Where(s => s.Market == MarketKind.A && string.IsNullOrWhiteSpace(s.Sector))
             .Select(s => s.SecId)
             .Distinct(StringComparer.Ordinal)
             .ToList();
@@ -391,17 +392,22 @@ public sealed class MainViewModel : ObservableObject
                 s.Price - s.Prev, s.Open, s.High, s.Low, now, true), false, session);
         }
 
-        var demoBoards = new Dictionary<string, (double Price, double Pct)>
+        var demoIndices = new Dictionary<string, (double Price, double Pct)>
         {
-            [BoardCatalog.ShanghaiMain] = (3587.43, 0.35),
-            [BoardCatalog.HongKong] = (23477.75, -0.48),
-            [BoardCatalog.UnitedStates] = (7541.40, -0.51),
-            [BoardCatalog.ChiNext] = (2389.30, 1.12)
+            ["1.000001"] = (3587.43, 0.35),
+            ["0.399006"] = (2389.30, 1.12),
+            ["116.HSI"] = (23477.75, -0.48),
+            ["105.IXIC"] = (25164.36, -1.07),
+            ["105.DJI"] = (51983.98, 0.41)
         };
-        foreach (var pair in demoBoards)
+        foreach (var board in Boards)
         {
-            _boardPrices[pair.Key] = pair.Value.Price;
-            _boardChanges[pair.Key] = pair.Value.Pct;
+            foreach (var index in board.Indices)
+            {
+                if (!demoIndices.TryGetValue(index.SecId, out var v)) continue;
+                index.SetPrice(v.Price);
+                index.SetChange(v.Pct);
+            }
         }
 
         RecalcPortfolio();
@@ -479,10 +485,10 @@ public sealed class MainViewModel : ObservableObject
             var probeIds = markets.Select(MarketClock.ProbeSecId)
                 .Where(p => !stockIds.Contains(p, StringComparer.Ordinal))
                 .ToList();
-            var boardIds = Stocks.Select(s => s.BoardName).Distinct(StringComparer.Ordinal)
-                .Select(BoardCatalog.IndexSecId)
-                .Where(id => id != null)
-                .Cast<string>()
+            var boardIds = Boards.SelectMany(b => b.Indices)
+                .Select(i => i.SecId)
+                .Where(id => id.Length > 0)
+                .Distinct(StringComparer.Ordinal)
                 .ToList();
 
             // Benchmarks are fetched on every tick, even when idle, so openings and holidays
@@ -506,13 +512,15 @@ public sealed class MainViewModel : ObservableObject
                     _heartbeats[market] = probe.UpdatedAt;
             }
 
-            foreach (var board in Stocks.Select(s => s.BoardName).Distinct(StringComparer.Ordinal))
+            foreach (var board in Boards)
             {
-                var indexSecId = BoardCatalog.IndexSecId(board);
-                if (indexSecId != null && quotes.TryGetValue(indexSecId, out var index) && index.HasData)
+                foreach (var index in board.Indices)
                 {
-                    _boardChanges[board] = index.ChangePct;
-                    _boardPrices[board] = index.Price;
+                    if (quotes.TryGetValue(index.SecId, out var quote) && quote.HasData)
+                    {
+                        index.SetPrice(quote.Price);
+                        index.SetChange(quote.ChangePct);
+                    }
                 }
             }
 
