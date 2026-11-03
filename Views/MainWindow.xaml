@@ -1,4 +1,4 @@
-﻿<Window x:Class="StockPin.Views.MainWindow"
+<Window x:Class="StockPin.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="StockPin"
@@ -197,22 +197,23 @@
                                             </StackPanel>
                                         </Border>
 
-                                        <Border CornerRadius="9" BorderBrush="{DynamicResource Divider}"
-                                                BorderThickness="1" Padding="6,1" Margin="6,0,0,0"
-                                                VerticalAlignment="Center"
-                                                Visibility="{Binding ShowBoard, Converter={StaticResource BoolToVis}}">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Board.Name}" FontSize="9"
-                                                           Foreground="{DynamicResource TextMuted}"
-                                                           MaxWidth="85" TextTrimming="CharacterEllipsis"
-                                                           VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding Board.ChangePctText}"
-                                                           Tag="{Binding Board.DirectionText}"
-                                                           Style="{StaticResource DirectionText}"
-                                                           FontSize="9" Margin="4,0,0,0"
-                                                           VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </Border>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                                    Margin="7,0,0,0"
+                                                    Visibility="{Binding ShowBoard, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="{Binding Board.Name}" FontSize="9"
+                                                       Foreground="{DynamicResource TextMuted}"
+                                                       MaxWidth="95" TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Board.PriceText}" FontSize="9"
+                                                       Foreground="{DynamicResource TextPrimary}"
+                                                       Margin="4,0,0,0" VerticalAlignment="Center"
+                                                       Visibility="{Binding Board.HasPrice, Converter={StaticResource BoolToVis}}" />
+                                            <TextBlock Text="{Binding Board.ChangePctText}"
+                                                       Tag="{Binding Board.DirectionText}"
+                                                       Style="{StaticResource DirectionText}"
+                                                       FontSize="9" Margin="4,0,0,0"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
                                     </StackPanel>
 
                                     <ItemsControl ItemsSource="{Binding Sector.Stocks}"

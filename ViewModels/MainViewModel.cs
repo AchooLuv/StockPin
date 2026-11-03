@@ -37,6 +37,7 @@ public sealed class MainViewModel : ObservableObject
 
     private readonly Dictionary<string, double> _sectorChanges = new(StringComparer.Ordinal);
     private readonly Dictionary<string, double> _boardChanges = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, double> _boardPrices = new(StringComparer.Ordinal);
     private DateTimeOffset _lastSectorChangeLoad = DateTimeOffset.MinValue;
     private bool _sectorsLoading;
     private bool _sectorChangesLoading;
@@ -228,6 +229,9 @@ public sealed class MainViewModel : ObservableObject
     {
         foreach (var board in Boards)
         {
+            if (_boardPrices.TryGetValue(board.Name, out double boardPrice)) board.SetPrice(boardPrice);
+            else board.ClearPrice();
+
             if (_boardChanges.TryGetValue(board.Name, out double boardPct))
             {
                 board.SetChange(boardPct);
@@ -335,11 +339,22 @@ public sealed class MainViewModel : ObservableObject
                 s.Price - s.Prev, s.Open, s.High, s.Low, now, true), false, session);
         }
 
+        var demoBoards = new Dictionary<string, (double Price, double Pct)>
+        {
+            [BoardCatalog.ShanghaiMain] = (3587.43, 0.35),
+            [BoardCatalog.HongKong] = (23477.75, -0.48),
+            [BoardCatalog.UnitedStates] = (7541.40, -0.51),
+            [BoardCatalog.ChiNext] = (2389.30, 1.12)
+        };
+        foreach (var pair in demoBoards)
+        {
+            _boardPrices[pair.Key] = pair.Value.Price;
+            _boardChanges[pair.Key] = pair.Value.Pct;
+        }
+
         RecalcPortfolio();
         UpdateGroupChanges();
     }
-
-    // ------------------------------------------------------------------ polling
 
     public void SetPaused(bool paused)
     {
@@ -443,7 +458,10 @@ public sealed class MainViewModel : ObservableObject
             {
                 var indexSecId = BoardCatalog.IndexSecId(board);
                 if (indexSecId != null && quotes.TryGetValue(indexSecId, out var index) && index.HasData)
+                {
                     _boardChanges[board] = index.ChangePct;
+                    _boardPrices[board] = index.Price;
+                }
             }
 
             // Tencent only has the last US close; overlay Sina's pre-market quote during 04:00–09:30 ET.

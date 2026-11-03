@@ -1,15 +1,15 @@
 namespace StockPin.Core;
 
-/// <summary>Maps a stock to its listing board and that board's index.</summary>
+/// <summary>Maps a stock to its market board and that board's index.</summary>
 public static class BoardCatalog
 {
-    public const string ShanghaiMain = "沪市主板";
-    public const string ShenzhenMain = "深市主板";
-    public const string ChiNext = "创业板";
-    public const string Star = "科创板";
-    public const string Beijing = "北交所";
-    public const string HongKong = "港股";
-    public const string UnitedStates = "美股";
+    public const string ShanghaiMain = "上证指数";
+    public const string ShenzhenMain = "深证成指";
+    public const string ChiNext = "创业板指";
+    public const string Star = "科创50";
+    public const string Beijing = "北证50";
+    public const string HongKong = "恒生指数";
+    public const string UnitedStates = "标普500";
 
     public static string Name(string market, string code)
     {
@@ -38,7 +38,7 @@ public static class BoardCatalog
         Star => "1.000688",           // 科创50
         Beijing => "0.899050",        // 北证50
         HongKong => "116.HSI",        // 恒生指数
-        UnitedStates => "105.SPY",    // 标普 500 ETF，作为美股大盘代理
+        UnitedStates => "105.INX",    // 标普 500 指数
         _ => null
     };
 }
