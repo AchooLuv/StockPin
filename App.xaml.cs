@@ -176,6 +176,7 @@ public partial class App : Application
         }
 
         Vm.ShowCode = Config.ShowCode;
+        Vm.ShowIndices = Config.ShowIndices;
         Vm.IntervalSec = Config.IntervalSec;
 
         if (Panel != null)

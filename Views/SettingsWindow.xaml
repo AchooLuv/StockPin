@@ -1,4 +1,4 @@
-﻿<Window x:Class="StockPin.Views.SettingsWindow"
+<Window x:Class="StockPin.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="StockPin 设置"
@@ -398,6 +398,11 @@
                                   IsChecked="{Binding ShowCode, Mode=TwoWay}" />
                         <TextBlock Style="{StaticResource Hint}"
                                    Text="在股票名称后面显示代码；关闭后更简洁。整块面板都可以直接拖到任意位置。" />
+
+                        <CheckBox Style="{StaticResource SwitchCheck}" Content="显示大盘指数"
+                                  IsChecked="{Binding ShowIndices, Mode=TwoWay}" Margin="0,12,0,0" />
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="在分组标题处显示上证指数 / 恒生指数 / 纳指 / 道指的点位和涨跌幅；关闭后 A 股只保留板块胶囊，港股 / 美股不再显示指数。" />
                     </StackPanel>
                 </ScrollViewer>
 

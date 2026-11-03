@@ -12,6 +12,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _hasError;
     private int _intervalSec;
     private bool _showCode;
+    private bool _showIndices;
 
     private readonly Dictionary<string, DateTimeOffset> _heartbeats = new(StringComparer.Ordinal);
     private readonly Dictionary<string, bool> _prevActive = new(StringComparer.Ordinal);
@@ -49,6 +50,7 @@ public sealed class MainViewModel : ObservableObject
         _quotes = quotes;
         _intervalSec = config.IntervalSec;
         _showCode = config.ShowCode;
+        _showIndices = config.ShowIndices;
 
         foreach (var item in config.Stocks)
         {
@@ -102,6 +104,12 @@ public sealed class MainViewModel : ObservableObject
     {
         get => _showCode;
         set => Set(ref _showCode, value);
+    }
+
+    public bool ShowIndices
+    {
+        get => _showIndices;
+        set => Set(ref _showIndices, value);
     }
 
     public int IntervalSec

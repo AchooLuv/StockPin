@@ -66,6 +66,9 @@ public sealed class AppConfig
     public bool Locked { get; set; }
     public bool AutoStart { get; set; }
     public bool ShowCode { get; set; } = true;
+
+    /// <summary>Show the board/index strip above each group (上证指数 / 恒生指数 / 纳指 / 道指).</summary>
+    public bool ShowIndices { get; set; } = true;
     public double? Left { get; set; }
     public double? Top { get; set; }
     public double? SettingsLeft { get; set; }

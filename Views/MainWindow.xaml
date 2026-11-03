@@ -302,33 +302,37 @@
                                             </StackPanel>
                                         </Border>
 
-                                        <ItemsControl ItemsSource="{Binding Board.Indices}"
-                                                      VerticalAlignment="Center" Margin="7,0,0,0"
-                                                      Visibility="{Binding ShowBoard, Converter={StaticResource BoolToVis}}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal" />
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
-                                                        <TextBlock Text="{Binding Name}" FontSize="9"
-                                                                   Foreground="{DynamicResource TextMuted}"
-                                                                   VerticalAlignment="Center" />
-                                                        <TextBlock Text="{Binding PriceText}" FontSize="9"
-                                                                   Foreground="{DynamicResource TextPrimary}"
-                                                                   Margin="4,0,0,0" VerticalAlignment="Center"
-                                                                   Visibility="{Binding HasPrice, Converter={StaticResource BoolToVis}}" />
-                                                        <TextBlock Text="{Binding ChangePctText}"
-                                                                   Tag="{Binding DirectionText}"
-                                                                   Style="{StaticResource DirectionText}"
-                                                                   FontSize="9" Margin="4,0,0,0"
-                                                                   VerticalAlignment="Center" />
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                        <Border Visibility="{Binding DataContext.ShowIndices,
+                                                RelativeSource={RelativeSource AncestorType=Window},
+                                                Converter={StaticResource BoolToVis}}">
+                                            <ItemsControl ItemsSource="{Binding Board.Indices}"
+                                                          VerticalAlignment="Center" Margin="7,0,0,0"
+                                                          Visibility="{Binding ShowBoard, Converter={StaticResource BoolToVis}}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,12,0">
+                                                            <TextBlock Text="{Binding Name}" FontSize="9"
+                                                                       Foreground="{DynamicResource TextMuted}"
+                                                                       VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding PriceText}" FontSize="9"
+                                                                       Foreground="{DynamicResource TextPrimary}"
+                                                                       Margin="4,0,0,0" VerticalAlignment="Center"
+                                                                       Visibility="{Binding HasPrice, Converter={StaticResource BoolToVis}}" />
+                                                            <TextBlock Text="{Binding ChangePctText}"
+                                                                       Tag="{Binding DirectionText}"
+                                                                       Style="{StaticResource DirectionText}"
+                                                                       FontSize="9" Margin="4,0,0,0"
+                                                                       VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Border>
                                     </StackPanel>
 
                                     <ItemsControl ItemsSource="{Binding Stocks}"

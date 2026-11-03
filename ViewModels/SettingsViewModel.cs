@@ -43,6 +43,18 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    public bool ShowIndices
+    {
+        get => _config.ShowIndices;
+        set
+        {
+            if (_config.ShowIndices == value) return;
+            _config.ShowIndices = value;
+            OnPropertyChanged();
+            Raise();
+        }
+    }
+
     public bool AutoStart
     {
         get => _config.AutoStart;
@@ -111,6 +123,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ThemeIndex));
         OnPropertyChanged(nameof(ShowCode));
+        OnPropertyChanged(nameof(ShowIndices));
         OnPropertyChanged(nameof(AutoStart));
         OnPropertyChanged(nameof(IntervalSec));
         OnPropertyChanged(nameof(BackdropPercent));
