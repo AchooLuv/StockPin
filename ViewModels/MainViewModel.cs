@@ -77,6 +77,9 @@ public sealed class MainViewModel : ObservableObject
 
     public ObservableCollection<BoardGroup> Boards { get; } = new();
 
+    /// <summary>Flattened board+sector rows for the panel.</summary>
+    public ObservableCollection<DisplayGroup> DisplayGroups { get; } = new();
+
     public bool IsEmpty => Stocks.Count == 0;
 
     public bool HasPortfolio { get => _hasPortfolio; private set => Set(ref _hasPortfolio, value); }
@@ -205,6 +208,17 @@ public sealed class MainViewModel : ObservableObject
             }
 
             Boards.Add(board);
+        }
+
+        DisplayGroups.Clear();
+        foreach (var board in Boards)
+        {
+            bool first = true;
+            foreach (var sector in board.Sectors)
+            {
+                DisplayGroups.Add(new DisplayGroup(board, sector, first));
+                first = false;
+            }
         }
 
         UpdateGroupChanges();
