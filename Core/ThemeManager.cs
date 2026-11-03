@@ -137,7 +137,6 @@ public static class ThemeManager
             ["Accent"] = ThemePalette.Solid(p.Accent),
             ["AccentSoft"] = ThemePalette.Solid(p.AccentSoft),
             ["Surface"] = ThemePalette.Solid(p.Surface),
-            ["GroupBg"] = ThemePalette.Solid(p.IsDark ? p.Surface : "#2EFFFFFF"),
             ["RowHover"] = ThemePalette.Solid(p.Hover),
             ["ChipBg"] = ThemePalette.Solid(p.ChipBg),
             ["ChipText"] = ThemePalette.Solid(p.ChipText),
