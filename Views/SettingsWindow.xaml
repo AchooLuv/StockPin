@@ -399,10 +399,10 @@
                         <TextBlock Style="{StaticResource Hint}"
                                    Text="在股票名称后面显示代码；关闭后更简洁。整块面板都可以直接拖到任意位置。" />
 
-                        <CheckBox Style="{StaticResource SwitchCheck}" Content="显示大盘指数"
+                        <CheckBox Style="{StaticResource SwitchCheck}" Content="显示分组标题"
                                   IsChecked="{Binding ShowIndices, Mode=TwoWay}" Margin="0,12,0,0" />
                         <TextBlock Style="{StaticResource Hint}"
-                                   Text="在分组标题处显示上证指数 / 恒生指数 / 纳指 / 道指的点位和涨跌幅；关闭后 A 股只保留板块胶囊，港股 / 美股不再显示指数。" />
+                                   Text="开启时显示大盘指数和 A 股板块胶囊；关闭后全部隐藏，股票紧凑排列。" />
                     </StackPanel>
                 </ScrollViewer>
 

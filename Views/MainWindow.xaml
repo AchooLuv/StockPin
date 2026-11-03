@@ -281,7 +281,9 @@
             <Grid Grid.Row="2">
                 <ScrollViewer x:Name="StockScroll" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled" MaxHeight="420">
-                    <ItemsControl ItemsSource="{Binding DisplayGroups}" Margin="7,0,7,0">
+                    <Grid>
+                        <ItemsControl ItemsSource="{Binding DisplayGroups}" Margin="7,0,7,0"
+                                      Visibility="{Binding ShowIndices, Converter={StaticResource BoolToVis}}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="{Binding TopMargin}">
@@ -302,12 +304,9 @@
                                             </StackPanel>
                                         </Border>
 
-                                        <Border Visibility="{Binding DataContext.ShowIndices,
-                                                RelativeSource={RelativeSource AncestorType=Window},
-                                                Converter={StaticResource BoolToVis}}">
-                                            <ItemsControl ItemsSource="{Binding Board.Indices}"
-                                                          VerticalAlignment="Center" Margin="7,0,0,0"
-                                                          Visibility="{Binding ShowBoard, Converter={StaticResource BoolToVis}}">
+                                        <ItemsControl ItemsSource="{Binding Board.Indices}"
+                                                      VerticalAlignment="Center" Margin="7,0,0,0"
+                                                      Visibility="{Binding ShowBoard, Converter={StaticResource BoolToVis}}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <StackPanel Orientation="Horizontal" />
@@ -332,7 +331,6 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-                                        </Border>
                                     </StackPanel>
 
                                     <ItemsControl ItemsSource="{Binding Stocks}"
@@ -341,6 +339,21 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                        <ItemsControl ItemsSource="{Binding Stocks}" Margin="7,0,7,0"
+                                      ItemTemplate="{StaticResource StockRowTemplate}">
+                            <ItemsControl.Style>
+                                <Style TargetType="ItemsControl">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ShowIndices}" Value="False">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ItemsControl.Style>
+                        </ItemsControl>
+                    </Grid>
                 </ScrollViewer>
 
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,20,0,24"
