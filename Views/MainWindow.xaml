@@ -80,22 +80,15 @@
                     <ToolTip Style="{StaticResource StockToolTipStyle}"
                              DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel Width="228">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding DisplayName}" FontSize="12"
-                                           FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
-                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Text="{Binding Code}" FontSize="9"
-                                           Foreground="{DynamicResource TextMuted}" Margin="6,2,0,0"
-                                           VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2" Text="{Binding TagText}" FontSize="9"
-                                           Foreground="{DynamicResource TextMuted}" Margin="6,2,0,0"
-                                           VerticalAlignment="Center" />
-                            </Grid>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           MaxWidth="180" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Code}" FontSize="9"
+                                           Foreground="{DynamicResource TextMuted}" Margin="6,2,0,0" />
+                                <TextBlock Text="{Binding TagText}" FontSize="9"
+                                           Foreground="{DynamicResource TextMuted}" Margin="6,2,0,0" />
+                            </StackPanel>
 
                             <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
                                 <TextBlock Text="{Binding PriceText}" FontSize="16" FontWeight="SemiBold"
