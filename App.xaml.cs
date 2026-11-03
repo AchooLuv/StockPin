@@ -366,11 +366,11 @@ public partial class App : Application
             IntervalSec = 5,
             Stocks = new List<StockConfig>
             {
-                new() { SecId = "1.601872", Code = "601872", Name = "招商轮船", Market = MarketKind.A, Qty = 2000, Cost = 19.85 },
-                new() { SecId = "116.00700", Code = "00700", Name = "腾讯控股", Market = MarketKind.HK, Qty = 100, Cost = 388.00 },
-                new() { SecId = "106.ECO", Code = "ECO", Name = "Okeanis Eco Tankers Corp.", Market = MarketKind.US },
-                new() { SecId = "105.AAPL", Code = "AAPL", Name = "苹果", Market = MarketKind.US, Qty = 20, Cost = 330.00 },
-                new() { SecId = "0.300750", Code = "300750", Name = "宁德时代", Market = MarketKind.A }
+                new() { SecId = "1.601872", Code = "601872", Name = "招商轮船", Market = MarketKind.A, Qty = 2000, Cost = 19.85, Sector = "航运港口" },
+                new() { SecId = "116.00700", Code = "00700", Name = "腾讯控股", Market = MarketKind.HK, Qty = 100, Cost = 388.00, Sector = "软件服务" },
+                new() { SecId = "106.ECO", Code = "ECO", Name = "Okeanis Eco Tankers Corp.", Market = MarketKind.US, Sector = "能源" },
+                new() { SecId = "105.AAPL", Code = "AAPL", Name = "苹果", Market = MarketKind.US, Qty = 20, Cost = 330.00, Sector = "消费电子" },
+                new() { SecId = "0.300750", Code = "300750", Name = "宁德时代", Market = MarketKind.A, Sector = "电池" }
             }
         };
     }

@@ -41,11 +41,11 @@ def scaled(path, scale):
     return img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
 
 
-light = scaled("out/panel3.png", 0.85)   # 雾灰
-dark = scaled("out/panel1.png", 0.85)    # 深海（默认）
+light = scaled("out/panel3.png", 0.8)   # 雾灰
+dark = scaled("out/panel1.png", 0.8)    # 深海（默认）
 
-canvas.alpha_composite(dark, (655, 320))
-canvas.alpha_composite(light, (35, 115))
+canvas.alpha_composite(dark, (640, 215))
+canvas.alpha_composite(light, (35, 90))
 
 import os
 os.makedirs("docs", exist_ok=True)

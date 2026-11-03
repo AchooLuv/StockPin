@@ -35,6 +35,11 @@ public sealed class MainViewModel : ObservableObject
     private string _todayPctDirection = "Flat";
     private string _fxTooltip = "";
 
+    private readonly Dictionary<string, double> _sectorChanges = new(StringComparer.Ordinal);
+    private DateTimeOffset _lastSectorChangeLoad = DateTimeOffset.MinValue;
+    private bool _sectorsLoading;
+    private bool _sectorChangesLoading;
+
     public MainViewModel(AppConfig config, QuoteService quotes, bool seedDefaults)
     {
         _config = config;
@@ -45,7 +50,7 @@ public sealed class MainViewModel : ObservableObject
         foreach (var item in config.Stocks)
         {
             if (string.IsNullOrWhiteSpace(item.SecId)) continue;
-            AddEntry(new StockEntry(item.SecId, item.Code, item.Name, item.Market, item.Qty, item.Cost));
+            AddEntry(new StockEntry(item.SecId, item.Code, item.Name, item.Market, item.Qty, item.Cost, item.Sector));
         }
 
         if (seedDefaults && Stocks.Count == 0)
@@ -59,6 +64,8 @@ public sealed class MainViewModel : ObservableObject
         Stocks.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsEmpty));
 
         RecalcPortfolio();
+        RebuildGroups();
+        _ = LoadMissingSectorsAsync();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_intervalSec) };
         _timer.Tick += async (_, _) => await RefreshAsync();
@@ -66,6 +73,8 @@ public sealed class MainViewModel : ObservableObject
     }
 
     public ObservableCollection<StockEntry> Stocks { get; } = new();
+
+    public ObservableCollection<SectorGroup> Groups { get; } = new();
 
     public bool IsEmpty => Stocks.Count == 0;
 
@@ -108,9 +117,11 @@ public sealed class MainViewModel : ObservableObject
         AddEntry(entry);
         Persist();
         RecalcPortfolio();
+        RebuildGroups();
         UpdateTimerInterval();
         _forceAll = true;
         _ = RefreshAsync();
+        _ = LoadMissingSectorsAsync();
         return true;
     }
 
@@ -120,6 +131,7 @@ public sealed class MainViewModel : ObservableObject
         entry.PropertyChanged -= EntryChanged;
         Persist();
         RecalcPortfolio();
+        RebuildGroups();
         UpdateTimerInterval();
         OnPropertyChanged(nameof(IsEmpty));
     }
@@ -131,10 +143,16 @@ public sealed class MainViewModel : ObservableObject
         toIndex = Math.Clamp(toIndex, 0, Stocks.Count - 1);
         if (from == toIndex) return;
         Stocks.Move(from, toIndex);
-        if (persist) Persist();
+        if (!persist) return;
+        Persist();
+        RebuildGroups();
     }
 
-    public void PersistOrder() => Persist();
+    public void PersistOrder()
+    {
+        Persist();
+        RebuildGroups();
+    }
 
     public void MoveStockBy(StockEntry entry, int delta)
     {
@@ -144,12 +162,110 @@ public sealed class MainViewModel : ObservableObject
         if (from == to) return;
         Stocks.Move(from, to);
         Persist();
+        RebuildGroups();
     }
 
     public Task RefreshNowAsync()
     {
         _forceAll = true;
         return RefreshAsync();
+    }
+
+    private void RebuildGroups()
+    {
+        var order = Stocks.Select((s, i) => (s, i))
+            .GroupBy(p => p.s.SectorName)
+            .Select(g => new
+            {
+                Name = g.Key,
+                Stocks = g.OrderBy(p => p.i).Select(p => p.s).ToList(),
+                First = g.Min(p => p.i)
+            })
+            .OrderBy(g => g.First);
+
+        Groups.Clear();
+        foreach (var g in order)
+        {
+            var group = new SectorGroup(g.Name);
+            foreach (var stock in g.Stocks) group.Stocks.Add(stock);
+            Groups.Add(group);
+        }
+
+        UpdateGroupChanges();
+    }
+
+    private void UpdateGroupChanges()
+    {
+        foreach (var group in Groups)
+        {
+            if (_sectorChanges.TryGetValue(group.Name, out double official))
+            {
+                group.SetChange(official);
+                continue;
+            }
+
+            var quoted = group.Stocks.Where(s => s.HasQuote).ToList();
+            if (quoted.Count > 0) group.SetChange(quoted.Average(s => s.ChangePct));
+            else group.ClearChange();
+        }
+    }
+
+    private async Task LoadMissingSectorsAsync()
+    {
+        if (_sectorsLoading) return;
+
+        var missing = Stocks
+            .Where(s => string.IsNullOrWhiteSpace(s.Sector))
+            .Select(s => s.SecId)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (missing.Count == 0) return;
+
+        _sectorsLoading = true;
+        try
+        {
+            var sectors = await _quotes.FetchSectorsAsync(missing, CancellationToken.None);
+            foreach (var entry in Stocks)
+            {
+                if (sectors.TryGetValue(entry.SecId, out var sector) &&
+                    !string.IsNullOrWhiteSpace(sector) && sector != "-")
+                    entry.Sector = sector;
+            }
+            Persist();
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("sector fetch failed: " + ex.Message);
+        }
+        finally
+        {
+            _sectorsLoading = false;
+            RebuildGroups();
+        }
+    }
+
+    private async Task LoadSectorChangesAsync()
+    {
+        if (_sectorChangesLoading) return;
+        _sectorChangesLoading = true;
+        try
+        {
+            var changes = await _quotes.FetchSectorChangesAsync(CancellationToken.None);
+            if (changes.Count > 0)
+            {
+                _sectorChanges.Clear();
+                foreach (var item in changes) _sectorChanges[item.Key] = item.Value;
+            }
+            UpdateGroupChanges();
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("sector board fetch failed: " + ex.Message);
+        }
+        finally
+        {
+            _sectorChangesLoading = false;
+        }
     }
 
     /// <summary>Design-preview data used by <c>--demo</c> / <c>--screenshot</c>.</summary>
@@ -176,6 +292,7 @@ public sealed class MainViewModel : ObservableObject
         }
 
         RecalcPortfolio();
+        UpdateGroupChanges();
     }
 
     // ------------------------------------------------------------------ polling
@@ -328,6 +445,8 @@ public sealed class MainViewModel : ObservableObject
             if (namesChanged) Persist();
 
             RecalcPortfolio();
+            UpdateGroupChanges();
+            MaybeLoadSectorChanges();
             SetStatus("");
         }
         catch (Exception ex)
@@ -364,6 +483,14 @@ public sealed class MainViewModel : ObservableObject
         var interval = TimeSpan.FromSeconds(seconds);
         if (_timer.Interval != interval) _timer.Interval = interval;
         if (!_paused && !_timer.IsEnabled && Stocks.Count > 0) _timer.Start();
+    }
+
+    private void MaybeLoadSectorChanges()
+    {
+        var now = DateTimeOffset.Now;
+        if (now - _lastSectorChangeLoad < TimeSpan.FromSeconds(60)) return;
+        _lastSectorChangeLoad = now;
+        _ = LoadSectorChangesAsync();
     }
 
     private void SetStatus(string text)
@@ -459,6 +586,13 @@ public sealed class MainViewModel : ObservableObject
         {
             RecalcPortfolio();
             Persist();
+            return;
+        }
+
+        if (e.PropertyName == nameof(StockEntry.Sector) && !_sectorsLoading)
+        {
+            RebuildGroups();
+            Persist();
         }
     }
 
@@ -471,7 +605,8 @@ public sealed class MainViewModel : ObservableObject
             Name = s.Name,
             Market = s.Market,
             Qty = s.Qty,
-            Cost = s.Cost
+            Cost = s.Cost,
+            Sector = s.Sector
         }).ToList();
 
         ConfigService.ScheduleSave(_config);

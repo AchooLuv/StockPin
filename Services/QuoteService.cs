@@ -1,4 +1,4 @@
-namespace StockPin.Services;
+﻿namespace StockPin.Services;
 
 /// <summary>
 /// Free quotes via Tencent's public batch endpoint (A / HK / US in one request),
@@ -10,6 +10,8 @@ public sealed class QuoteService : IDisposable
     private const string SinaUrl = "https://hq.sinajs.cn/list=";
     private const string SearchUrl = "https://searchapi.eastmoney.com/api/suggest/get";
     private const string SearchToken = "D43BF722C8E33BDC906FB84D85E326E8";
+    private const string StockUrl = "https://push2.eastmoney.com/api/qt/stock/get";
+    private const string BoardListUrl = "https://push2.eastmoney.com/api/qt/clist/get";
 
     private static readonly TimeZoneInfo NewYork = FindZone("America/New_York", "Eastern Standard Time");
     private static Encoding _gbk = Encoding.UTF8;
@@ -115,6 +117,67 @@ public sealed class QuoteService : IDisposable
 
             var quote = ParseSinaUsPreMarket(secId, payload.Split(','));
             if (quote != null) result[secId] = quote;
+        }
+
+        return result;
+    }
+
+    /// <summary>Sector / industry name per stock (Eastmoney f127), cached by the caller.</summary>
+    public async Task<Dictionary<string, string>> FetchSectorsAsync(IEnumerable<string> secIds, CancellationToken ct)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        var ids = secIds.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.Ordinal).ToList();
+        if (ids.Count == 0) return result;
+
+        using var gate = new SemaphoreSlim(3);
+        var tasks = ids.Select(async secId =>
+        {
+            await gate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                var url = $"{StockUrl}?secid={Uri.EscapeDataString(secId)}&fields=f57,f58,f127";
+                using var doc = await GetJsonAsync(url, ct).ConfigureAwait(false);
+                if (doc == null) return;
+                if (!doc.RootElement.TryGetProperty("data", out var data) ||
+                    data.ValueKind != JsonValueKind.Object) return;
+
+                var sector = Str(data, "f127").Trim();
+                if (sector.Length == 0) return;
+                lock (result) result[secId] = sector;
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+        return result;
+    }
+
+    /// <summary>Industry board change per board name, used for the group header.</summary>
+    public async Task<Dictionary<string, double>> FetchSectorChangesAsync(CancellationToken ct)
+    {
+        var result = new Dictionary<string, double>(StringComparer.Ordinal);
+        const int pageSize = 100;
+
+        for (int page = 1; page <= 6; page++)
+        {
+            var url = $"{BoardListUrl}?pn={page}&pz={pageSize}&po=1&np=1&fltt=2&fid=f3&fs=m:90+t:2&fields=f3,f14";
+            using var doc = await GetJsonAsync(url, ct).ConfigureAwait(false);
+            if (doc == null) break;
+            if (!doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object) break;
+            if (!data.TryGetProperty("diff", out var diff) || diff.ValueKind != JsonValueKind.Array) break;
+
+            foreach (var item in diff.EnumerateArray())
+            {
+                var name = Str(item, "f14").Trim();
+                if (name.Length > 0) result[name] = ParseNum(Str(item, "f3"));
+            }
+
+            int total = (int)ParseNum(Str(data, "total"));
+            if (result.Count >= total || diff.GetArrayLength() < pageSize) break;
+            await Task.Delay(80, ct).ConfigureAwait(false);
         }
 
         return result;

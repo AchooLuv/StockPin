@@ -1,4 +1,4 @@
-﻿<Window x:Class="StockPin.Views.MainWindow"
+<Window x:Class="StockPin.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="StockPin"
@@ -57,6 +57,51 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <DataTemplate x:Key="StockRowTemplate">
+            <Grid Height="26" Background="Transparent" ToolTip="{Binding DetailText}"
+                  MouseRightButtonDown="StockRow_RightButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="{Binding TagText}" FontSize="9"
+                           Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" />
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="4,0,4,0">
+                    <TextBlock Text="{Binding DisplayName}" FontSize="12"
+                               Foreground="{DynamicResource TextPrimary}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="156"
+                               VerticalAlignment="Center" />
+
+                    <TextBlock Text="{Binding SessionText}" FontSize="9"
+                               Foreground="{DynamicResource TextMuted}" Margin="3,1,0,0"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding HasSessionText, Converter={StaticResource BoolToVis}}" />
+
+                    <TextBlock Text="{Binding Code}" FontSize="9"
+                               Foreground="{DynamicResource TextMuted}" Margin="3,1,0,0"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding DataContext.ShowCode,
+                                   RelativeSource={RelativeSource AncestorType=Window},
+                                   Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+
+                <TextBlock Grid.Column="2" Text="{Binding PriceText}" FontSize="12"
+                           FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           TextAlignment="Right" MinWidth="44" Margin="0,0,5,0" />
+
+                <TextBlock Grid.Column="3" Text="{Binding ChangePctText}"
+                           Tag="{Binding DirectionText}" Style="{StaticResource DirectionText}"
+                           FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Right"
+                           VerticalAlignment="Center" TextAlignment="Right" MinWidth="46" />
+            </Grid>
+        </DataTemplate>
+
     </Window.Resources>
 
     <!-- No card, no border: only the text is painted.
@@ -132,51 +177,32 @@
             <Grid Grid.Row="2">
                 <ScrollViewer x:Name="StockScroll" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled" MaxHeight="420">
-                    <ItemsControl ItemsSource="{Binding Stocks}" Margin="7,0,7,0">
+                    <ItemsControl ItemsSource="{Binding Groups}" Margin="7,0,7,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid Height="26" Background="Transparent" ToolTip="{Binding DetailText}"
-                                      MouseRightButtonDown="StockRow_RightButtonDown">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="14" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <Grid Height="20" Margin="0,3,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
 
-                                    <TextBlock Text="{Binding TagText}" FontSize="9"
-                                               Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="10"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   VerticalAlignment="Center" Margin="14,0,4,0"
+                                                   TextTrimming="CharacterEllipsis" />
 
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                                VerticalAlignment="Center" Margin="4,0,4,0">
-                                        <TextBlock Text="{Binding DisplayName}" FontSize="12"
-                                                   Foreground="{DynamicResource TextPrimary}"
-                                                   TextTrimming="CharacterEllipsis" MaxWidth="156"
-                                                   VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding ChangePctText}"
+                                                   Tag="{Binding DirectionText}"
+                                                   Style="{StaticResource DirectionText}" FontSize="10"
+                                                   VerticalAlignment="Center" Margin="0,0,2,0" />
+                                    </Grid>
 
-                                        <TextBlock Text="{Binding SessionText}" FontSize="9"
-                                                   Foreground="{DynamicResource TextMuted}" Margin="3,1,0,0"
-                                                   VerticalAlignment="Center"
-                                                   Visibility="{Binding HasSessionText, Converter={StaticResource BoolToVis}}" />
+                                    <Border Height="1" Background="{DynamicResource Divider}" Margin="0,0,0,1" />
 
-                                        <TextBlock Text="{Binding Code}" FontSize="9"
-                                                   Foreground="{DynamicResource TextMuted}" Margin="3,1,0,0"
-                                                   VerticalAlignment="Center"
-                                                   Visibility="{Binding DataContext.ShowCode,
-                                                       RelativeSource={RelativeSource AncestorType=Window},
-                                                       Converter={StaticResource BoolToVis}}" />
-                                    </StackPanel>
-
-                                    <TextBlock Grid.Column="2" Text="{Binding PriceText}" FontSize="12"
-                                               FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
-                                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                                               TextAlignment="Right" MinWidth="44" Margin="0,0,5,0" />
-
-                                    <TextBlock Grid.Column="3" Text="{Binding ChangePctText}"
-                                               Tag="{Binding DirectionText}" Style="{StaticResource DirectionText}"
-                                               FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Right"
-                                               VerticalAlignment="Center" TextAlignment="Right" MinWidth="46" />
-                                </Grid>
+                                    <ItemsControl ItemsSource="{Binding Stocks}"
+                                                  ItemTemplate="{StaticResource StockRowTemplate}" />
+                                </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

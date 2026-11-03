@@ -9,6 +9,9 @@ public sealed class StockConfig
     public string Market { get; set; } = MarketKind.A;
     public int Qty { get; set; }
     public double Cost { get; set; }
+
+    /// <summary>Sector / industry name, filled from Eastmoney and cached.</summary>
+    public string Sector { get; set; } = "";
 }
 
 public static class MarketKind

@@ -26,8 +26,10 @@ public sealed class StockEntry : ObservableObject
     private string _sessionText = "";
     private string _qtyText = "";
     private string _costText = "";
+    private string _sector = "";
 
-    public StockEntry(string secId, string code, string name, string market, int qty = 0, double cost = 0)
+    public StockEntry(string secId, string code, string name, string market, int qty = 0, double cost = 0,
+        string sector = "")
     {
         SecId = secId;
         Code = code;
@@ -35,6 +37,7 @@ public sealed class StockEntry : ObservableObject
         _name = name;
         _qty = qty;
         _cost = cost;
+        _sector = sector ?? "";
         _qtyText = qty > 0 ? qty.ToString(CultureInfo.InvariantCulture) : "";
         _costText = cost > 0 ? cost.ToString("0.###", CultureInfo.InvariantCulture) : "";
     }
@@ -55,6 +58,22 @@ public sealed class StockEntry : ObservableObject
     public string DisplayName => string.IsNullOrWhiteSpace(_name) ? Code : _name;
     public string TagText => MarketKind.Tag(Market);
     public string MarketLabel => MarketKind.Label(Market);
+
+    /// <summary>Industry / board name, fetched from Eastmoney and cached in the config.</summary>
+    public string Sector
+    {
+        get => _sector;
+        set
+        {
+            var text = value ?? "";
+            if (!Set(ref _sector, text)) return;
+            OnPropertyChanged(nameof(SectorName));
+            OnPropertyChanged(nameof(HasSector));
+        }
+    }
+
+    public string SectorName => string.IsNullOrWhiteSpace(_sector) ? "未分类" : _sector;
+    public bool HasSector => _sector.Length > 0;
 
     public double Price { get => _price; private set => Set(ref _price, value); }
     public double PrevClose { get => _prevClose; private set => Set(ref _prevClose, value); }
