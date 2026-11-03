@@ -27,6 +27,8 @@ public sealed class StockEntry : ObservableObject
     private string _qtyText = "";
     private string _costText = "";
     private string _sector = "";
+    private double? _mtdBase;
+    private double? _ytdBase;
 
     public StockEntry(string secId, string code, string name, string market, int qty = 0, double cost = 0,
         string sector = "")
@@ -95,13 +97,24 @@ public sealed class StockEntry : ObservableObject
     public int Qty
     {
         get => _qty;
-        set => Set(ref _qty, Math.Max(0, value));
+        set
+        {
+            if (Set(ref _qty, Math.Max(0, value)))
+            {
+                OnPropertyChanged(nameof(HasPosition));
+                OnPropertyChanged(nameof(PositionQtyText));
+            }
+        }
     }
 
     public double Cost
     {
         get => _cost;
-        set => Set(ref _cost, Math.Max(0, value));
+        set
+        {
+            if (Set(ref _cost, Math.Max(0, value)))
+                OnPropertyChanged(nameof(PositionCostText));
+        }
     }
 
     /// <summary>
@@ -176,31 +189,48 @@ public sealed class StockEntry : ObservableObject
         ? "—"
         : (_changeAmt > 0 ? "+" : "") + Format(_changeAmt, Decimals);
 
-    public string DetailText
+    public string PrevCloseText => _hasQuote ? Format(_prevClose, Decimals) : "—";
+    public string OpenText => _open > 0 ? Format(_open, Decimals) : "—";
+    public string HighText => _high > 0 ? Format(_high, Decimals) : "—";
+    public string LowText => _low > 0 ? Format(_low, Decimals) : "—";
+
+    /// <summary>"交易中" / "已收盘" / "盘前" … shown in the tooltip.</summary>
+    public string StateText => _isOpen ? "交易中" : _sessionText.Length > 0 ? _sessionText : "休市";
+
+    public string UpdatedText => _hasQuote ? "更新于 " + _updatedAt.ToLocalTime().ToString("HH:mm:ss") : "";
+
+    public bool HasPosition => _qty > 0;
+    public string PositionQtyText => _qty.ToString("N0", CultureInfo.InvariantCulture);
+    public string PositionCostText => Format(_cost, Decimals);
+
+    public string MtdPctText => PeriodPctText(_mtdBase);
+    public string YtdPctText => PeriodPctText(_ytdBase);
+    public string MtdDirectionText => PeriodDirection(_mtdBase);
+    public string YtdDirectionText => PeriodDirection(_ytdBase);
+
+    /// <summary>Base closes for month-to-date / year-to-date, fetched once per session.</summary>
+    public void SetPeriodBases(double? mtdBase, double? ytdBase)
     {
-        get
-        {
-            if (!_hasQuote)
-                return $"{MarketLabel} · {Code}\n暂无行情数据";
+        _mtdBase = mtdBase;
+        _ytdBase = ytdBase;
+        OnPropertyChanged(nameof(MtdPctText));
+        OnPropertyChanged(nameof(YtdPctText));
+        OnPropertyChanged(nameof(MtdDirectionText));
+        OnPropertyChanged(nameof(YtdDirectionText));
+    }
 
-            var local = _updatedAt.ToLocalTime();
-            var lines = new List<string> { $"{MarketLabel} · {Code}" };
+    private string PeriodPctText(double? basePrice)
+    {
+        if (!_hasQuote || basePrice is not > 0) return "—";
+        double pct = (_price - basePrice.Value) / basePrice.Value * 100;
+        return (pct > 0 ? "+" : "") + pct.ToString("F2", CultureInfo.InvariantCulture) + "%";
+    }
 
-            if (_open > 0 || _high > 0 || _low > 0)
-            {
-                lines.Add($"昨收 {Format(_prevClose, Decimals)}    今开 {Format(_open, Decimals)}");
-                lines.Add($"最高 {Format(_high, Decimals)}    最低 {Format(_low, Decimals)}");
-            }
-            else
-            {
-                // Pre-market quotes have no regular-session OHLC yet.
-                lines.Add($"昨收 {Format(_prevClose, Decimals)}");
-            }
-
-            var state = _sessionText.Length > 0 ? _sessionText : IsOpen ? "交易中" : "休市";
-            lines.Add($"{state} · 更新于 {local:MM-dd HH:mm:ss}");
-            return string.Join("\n", lines);
-        }
+    private string PeriodDirection(double? basePrice)
+    {
+        if (!_hasQuote || basePrice is not > 0) return "Flat";
+        double pct = (_price - basePrice.Value) / basePrice.Value * 100;
+        return pct > 0.0001 ? "Up" : pct < -0.0001 ? "Down" : "Flat";
     }
 
     /// <summary>Applies a fresh quote. Raises a blanket notification (cheap: ~10 rows).</summary>

@@ -41,6 +41,9 @@ public sealed class MainViewModel : ObservableObject
     private DateTimeOffset _lastSectorChangeLoad = DateTimeOffset.MinValue;
     private bool _sectorsLoading;
     private bool _sectorChangesLoading;
+    private bool _periodsLoading;
+    private DateTime _lastPeriodAttempt;
+    private readonly Dictionary<string, (double? Mtd, double? Ytd)> _periodBases = new(StringComparer.Ordinal);
 
     public MainViewModel(AppConfig config, QuoteService quotes, bool seedDefaults)
     {
@@ -68,6 +71,7 @@ public sealed class MainViewModel : ObservableObject
         RecalcPortfolio();
         RebuildGroups();
         _ = LoadMissingSectorsAsync();
+        _ = LoadPeriodChangesAsync();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_intervalSec) };
         _timer.Tick += async (_, _) => await RefreshAsync();
@@ -127,6 +131,7 @@ public sealed class MainViewModel : ObservableObject
         _forceAll = true;
         _ = RefreshAsync();
         _ = LoadMissingSectorsAsync();
+        _ = LoadPeriodChangesAsync();
         return true;
     }
 
@@ -314,6 +319,53 @@ public sealed class MainViewModel : ObservableObject
         {
             _sectorChangesLoading = false;
         }
+    }
+
+    private async Task LoadPeriodChangesAsync()
+    {
+        if (_periodsLoading) return;
+        var missing = Stocks.Where(s => !_periodBases.ContainsKey(s.SecId)).ToList();
+        if (missing.Count == 0)
+        {
+            ApplyPeriodBases();
+            return;
+        }
+
+        _periodsLoading = true;
+        _lastPeriodAttempt = DateTime.UtcNow;
+        try
+        {
+            var bases = await _quotes.FetchPeriodBasesAsync(
+                    missing.Select(s => (s.SecId, s.Market)).ToList(), DateTimeOffset.Now, CancellationToken.None)
+                .ConfigureAwait(true);
+            foreach (var item in bases) _periodBases[item.Key] = item.Value;
+            ApplyPeriodBases();
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("period history fetch failed: " + ex.Message);
+        }
+        finally
+        {
+            _periodsLoading = false;
+        }
+    }
+
+    private void ApplyPeriodBases()
+    {
+        foreach (var entry in Stocks)
+        {
+            if (_periodBases.TryGetValue(entry.SecId, out var bases))
+                entry.SetPeriodBases(bases.Mtd, bases.Ytd);
+        }
+    }
+
+    private void MaybeLoadPeriodChanges()
+    {
+        if (_periodsLoading) return;
+        if (Stocks.All(s => _periodBases.ContainsKey(s.SecId))) return;
+        if (DateTime.UtcNow - _lastPeriodAttempt < TimeSpan.FromMinutes(5)) return;
+        _ = LoadPeriodChangesAsync();
     }
 
     /// <summary>Design-preview data used by <c>--demo</c> / <c>--screenshot</c>.</summary>
@@ -522,6 +574,7 @@ public sealed class MainViewModel : ObservableObject
             RecalcPortfolio();
             UpdateGroupChanges();
             MaybeLoadSectorChanges();
+            MaybeLoadPeriodChanges();
             SetStatus("");
         }
         catch (Exception ex)

@@ -31,6 +31,22 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="StockToolTipStyle" TargetType="ToolTip">
+            <Setter Property="HasDropShadow" Value="False" />
+            <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{DynamicResource TooltipBg}"
+                                BorderBrush="{DynamicResource TooltipBorder}"
+                                BorderThickness="1" CornerRadius="8" Padding="10,8">
+                            <ContentPresenter />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="PanelIconButton" TargetType="Button">
             <Setter Property="Width" Value="23" />
             <Setter Property="Height" Value="23" />
@@ -58,8 +74,96 @@
             </Setter>
         </Style>
         <DataTemplate x:Key="StockRowTemplate">
-            <Grid Height="26" Background="Transparent" ToolTip="{Binding DetailText}"
+            <Grid Height="26" Background="Transparent"
                   MouseRightButtonDown="StockRow_RightButtonDown">
+                <Grid.ToolTip>
+                    <ToolTip Style="{StaticResource StockToolTipStyle}"
+                             DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <StackPanel Width="228">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           MaxWidth="150" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Code}" FontSize="9"
+                                           Foreground="{DynamicResource TextMuted}" Margin="6,2,0,0" />
+                                <TextBlock Text="{Binding TagText}" FontSize="9"
+                                           Foreground="{DynamicResource TextMuted}" Margin="6,2,0,0" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                <TextBlock Text="{Binding PriceText}" FontSize="16" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Text="{Binding ChangeAmtText}" Tag="{Binding DirectionText}"
+                                           Style="{StaticResource DirectionText}" FontSize="10" Margin="6,5,0,0" />
+                                <TextBlock Text="{Binding ChangePctText}" Tag="{Binding DirectionText}"
+                                           Style="{StaticResource DirectionText}" FontSize="10" Margin="4,5,0,0" />
+                            </StackPanel>
+
+                            <Border Height="1" Background="{DynamicResource Divider}" Margin="0,6,0,5" />
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="18" />
+                                    <RowDefinition Height="18" />
+                                    <RowDefinition Height="18" />
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="昨收" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Text="{Binding PrevCloseText}" FontSize="9.5"
+                                               Foreground="{DynamicResource TextPrimary}" Margin="5,0,0,0" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                                    <TextBlock Text="今开" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Text="{Binding OpenText}" FontSize="9.5"
+                                               Foreground="{DynamicResource TextPrimary}" Margin="5,0,0,0" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="最高" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Text="{Binding HighText}" FontSize="9.5"
+                                               Foreground="{DynamicResource TextPrimary}" Margin="5,0,0,0" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                                    <TextBlock Text="最低" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Text="{Binding LowText}" FontSize="9.5"
+                                               Foreground="{DynamicResource TextPrimary}" Margin="5,0,0,0" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="月初至今" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Text="{Binding MtdPctText}" Tag="{Binding MtdDirectionText}"
+                                               Style="{StaticResource DirectionText}" FontSize="9.5" Margin="5,0,0,0" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                                    <TextBlock Text="年初至今" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Text="{Binding YtdPctText}" Tag="{Binding YtdDirectionText}"
+                                               Style="{StaticResource DirectionText}" FontSize="9.5" Margin="5,0,0,0" />
+                                </StackPanel>
+                            </Grid>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0"
+                                        Visibility="{Binding HasPosition, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="持仓" FontSize="9.5" Foreground="{DynamicResource TextMuted}" />
+                                <TextBlock Text="{Binding PositionQtyText}" FontSize="9.5"
+                                           Foreground="{DynamicResource TextPrimary}" Margin="5,0,0,0" />
+                                <TextBlock Text="成本" FontSize="9.5" Foreground="{DynamicResource TextMuted}" Margin="14,0,0,0" />
+                                <TextBlock Text="{Binding PositionCostText}" FontSize="9.5"
+                                           Foreground="{DynamicResource TextPrimary}" Margin="5,0,0,0" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                <TextBlock Text="{Binding StateText}" FontSize="8.5" Foreground="{DynamicResource TextMuted}" />
+                                <TextBlock Text="{Binding UpdatedText}" FontSize="8.5"
+                                           Foreground="{DynamicResource TextMuted}" Margin="6,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ToolTip>
+                </Grid.ToolTip>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="14" />
                     <ColumnDefinition Width="*" />

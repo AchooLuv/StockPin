@@ -1,4 +1,4 @@
-﻿namespace StockPin.Services;
+namespace StockPin.Services;
 
 /// <summary>
 /// Free quotes via Tencent's public batch endpoint (A / HK / US in one request),
@@ -12,6 +12,7 @@ public sealed class QuoteService : IDisposable
     private const string SearchToken = "D43BF722C8E33BDC906FB84D85E326E8";
     private const string StockUrl = "https://push2.eastmoney.com/api/qt/stock/get";
     private const string BoardListUrl = "https://push2.eastmoney.com/api/qt/clist/get";
+    private const string KlineUrl = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
 
     private static readonly TimeZoneInfo NewYork = FindZone("America/New_York", "Eastern Standard Time");
     private static Encoding _gbk = Encoding.UTF8;
@@ -180,6 +181,79 @@ public sealed class QuoteService : IDisposable
             await Task.Delay(80, ct).ConfigureAwait(false);
         }
 
+        return result;
+    }
+
+    /// <summary>Month-to-date / year-to-date base closes from Eastmoney daily K-lines.</summary>
+    public async Task<Dictionary<string, (double? Mtd, double? Ytd)>> FetchPeriodBasesAsync(
+        IReadOnlyList<(string SecId, string Market)> items, DateTimeOffset now, CancellationToken ct)
+    {
+        var result = new Dictionary<string, (double? Mtd, double? Ytd)>(StringComparer.Ordinal);
+        var unique = items.Where(i => !string.IsNullOrWhiteSpace(i.SecId))
+            .GroupBy(i => i.SecId, StringComparer.Ordinal)
+            .Select(g => g.First())
+            .ToList();
+        if (unique.Count == 0) return result;
+
+        using var gate = new SemaphoreSlim(2);
+        var tasks = unique.Select(async item =>
+        {
+            await gate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                var localDate = MarketClock.LocalDate(item.Market, now);
+                var monthStart = new DateTime(localDate.Year, localDate.Month, 1);
+                var yearStart = new DateTime(localDate.Year, 1, 1);
+                var beg = new DateTime(localDate.Year - 1, 12, 1);
+
+                var url = $"{KlineUrl}?secid={Uri.EscapeDataString(item.SecId)}" +
+                          "&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53&klt=101&fqt=1" +
+                          $"&beg={beg:yyyyMMdd}&end=20500101";
+
+                using var doc = await GetJsonAsync(url, ct).ConfigureAwait(false);
+                if (doc == null) return;
+                if (!doc.RootElement.TryGetProperty("data", out var data) ||
+                    data.ValueKind != JsonValueKind.Object) return;
+                if (!data.TryGetProperty("klines", out var klines) ||
+                    klines.ValueKind != JsonValueKind.Array) return;
+
+                double? mtd = null, ytd = null;
+                DateTime mtdDate = DateTime.MinValue, ytdDate = DateTime.MinValue;
+
+                foreach (var line in klines.EnumerateArray())
+                {
+                    var text = line.GetString();
+                    if (string.IsNullOrEmpty(text)) continue;
+                    var parts = text.Split(',');
+                    if (parts.Length < 3) continue;
+                    if (!DateTime.TryParseExact(parts[0], "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                            DateTimeStyles.None, out var date)) continue;
+
+                    double close = ParseNum(parts[2]);
+                    if (close <= 0) continue;
+
+                    if (date < monthStart && date > mtdDate)
+                    {
+                        mtd = close;
+                        mtdDate = date;
+                    }
+
+                    if (date < yearStart && date > ytdDate)
+                    {
+                        ytd = close;
+                        ytdDate = date;
+                    }
+                }
+
+                lock (result) result[item.SecId] = (mtd, ytd);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks).ConfigureAwait(false);
         return result;
     }
 

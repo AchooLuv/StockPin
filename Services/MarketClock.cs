@@ -61,6 +61,10 @@ public static class MarketClock
         _ => "休市"
     };
 
+    /// <summary>Calendar date in the market's local time zone.</summary>
+    public static DateTime LocalDate(string market, DateTimeOffset now)
+        => TimeZoneInfo.ConvertTime(now, Zone(market)).Date;
+
     /// <summary>
     /// Whether this market is worth polling right now: during the session, in the
     /// 30 minutes before the open, and for the first 15 minutes of a session segment.
