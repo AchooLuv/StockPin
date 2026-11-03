@@ -177,32 +177,59 @@
             <Grid Grid.Row="2">
                 <ScrollViewer x:Name="StockScroll" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled" MaxHeight="420">
-                    <ItemsControl ItemsSource="{Binding Groups}" Margin="7,0,7,0">
+                    <ItemsControl ItemsSource="{Binding Boards}" Margin="7,0,7,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel>
-                                    <Grid Height="20" Margin="0,3,0,2">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
+                                <Border CornerRadius="8" Background="{DynamicResource GroupBg}"
+                                        Margin="0,2" Padding="0,2">
+                                    <StackPanel>
+                                        <Grid Height="22" Margin="5,0,5,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
 
-                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="10"
-                                                   Foreground="{DynamicResource TextMuted}"
-                                                   VerticalAlignment="Center" Margin="14,0,4,0"
-                                                   TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="10"
+                                                       Foreground="{DynamicResource TextMuted}"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
 
-                                        <TextBlock Grid.Column="1" Text="{Binding ChangePctText}"
-                                                   Tag="{Binding DirectionText}"
-                                                   Style="{StaticResource DirectionText}" FontSize="10"
-                                                   VerticalAlignment="Center" Margin="0,0,2,0" />
-                                    </Grid>
+                                            <TextBlock Grid.Column="1" Text="{Binding ChangePctText}"
+                                                       Tag="{Binding DirectionText}"
+                                                       Style="{StaticResource DirectionText}" FontSize="10"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
 
-                                    <Border Height="1" Background="{DynamicResource Divider}" Margin="0,0,0,1" />
+                                        <ItemsControl ItemsSource="{Binding Sectors}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel>
+                                                        <Grid Height="20" Margin="14,0,4,0">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
 
-                                    <ItemsControl ItemsSource="{Binding Stocks}"
-                                                  ItemTemplate="{StaticResource StockRowTemplate}" />
-                                </StackPanel>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                       FontSize="9.5"
+                                                                       Foreground="{DynamicResource TextMuted}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+
+                                                            <TextBlock Grid.Column="1" Text="{Binding ChangePctText}"
+                                                                       Tag="{Binding DirectionText}"
+                                                                       Style="{StaticResource DirectionText}"
+                                                                       FontSize="9.5" VerticalAlignment="Center" />
+                                                        </Grid>
+
+                                                        <ItemsControl ItemsSource="{Binding Stocks}"
+                                                                      ItemTemplate="{StaticResource StockRowTemplate}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

@@ -36,6 +36,7 @@ public sealed class MainViewModel : ObservableObject
     private string _fxTooltip = "";
 
     private readonly Dictionary<string, double> _sectorChanges = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, double> _boardChanges = new(StringComparer.Ordinal);
     private DateTimeOffset _lastSectorChangeLoad = DateTimeOffset.MinValue;
     private bool _sectorsLoading;
     private bool _sectorChangesLoading;
@@ -74,7 +75,7 @@ public sealed class MainViewModel : ObservableObject
 
     public ObservableCollection<StockEntry> Stocks { get; } = new();
 
-    public ObservableCollection<SectorGroup> Groups { get; } = new();
+    public ObservableCollection<BoardGroup> Boards { get; } = new();
 
     public bool IsEmpty => Stocks.Count == 0;
 
@@ -173,22 +174,37 @@ public sealed class MainViewModel : ObservableObject
 
     private void RebuildGroups()
     {
-        var order = Stocks.Select((s, i) => (s, i))
-            .GroupBy(p => p.s.SectorName)
+        var index = Stocks.Select((s, i) => (s, i)).ToDictionary(p => p.s, p => p.i);
+        var boards = Stocks.GroupBy(s => s.BoardName)
             .Select(g => new
             {
                 Name = g.Key,
-                Stocks = g.OrderBy(p => p.i).Select(p => p.s).ToList(),
-                First = g.Min(p => p.i)
+                Stocks = g.OrderBy(s => index[s]).ToList(),
+                First = g.Min(s => index[s])
             })
             .OrderBy(g => g.First);
 
-        Groups.Clear();
-        foreach (var g in order)
+        Boards.Clear();
+        foreach (var b in boards)
         {
-            var group = new SectorGroup(g.Name);
-            foreach (var stock in g.Stocks) group.Stocks.Add(stock);
-            Groups.Add(group);
+            var board = new BoardGroup(b.Name);
+            var sectors = b.Stocks.GroupBy(s => s.SectorName)
+                .Select(g => new
+                {
+                    Name = g.Key,
+                    Stocks = g.OrderBy(s => index[s]).ToList(),
+                    First = g.Min(s => index[s])
+                })
+                .OrderBy(g => g.First);
+
+            foreach (var sg in sectors)
+            {
+                var sector = new SectorGroup(sg.Name);
+                foreach (var stock in sg.Stocks) sector.Stocks.Add(stock);
+                board.Sectors.Add(sector);
+            }
+
+            Boards.Add(board);
         }
 
         UpdateGroupChanges();
@@ -196,17 +212,31 @@ public sealed class MainViewModel : ObservableObject
 
     private void UpdateGroupChanges()
     {
-        foreach (var group in Groups)
+        foreach (var board in Boards)
         {
-            if (_sectorChanges.TryGetValue(group.Name, out double official))
+            if (_boardChanges.TryGetValue(board.Name, out double boardPct))
             {
-                group.SetChange(official);
-                continue;
+                board.SetChange(boardPct);
+            }
+            else
+            {
+                var quoted = board.Sectors.SelectMany(s => s.Stocks).Where(s => s.HasQuote).ToList();
+                if (quoted.Count > 0) board.SetChange(quoted.Average(s => s.ChangePct));
+                else board.ClearChange();
             }
 
-            var quoted = group.Stocks.Where(s => s.HasQuote).ToList();
-            if (quoted.Count > 0) group.SetChange(quoted.Average(s => s.ChangePct));
-            else group.ClearChange();
+            foreach (var sector in board.Sectors)
+            {
+                if (_sectorChanges.TryGetValue(sector.Name, out double sectorPct))
+                {
+                    sector.SetChange(sectorPct);
+                    continue;
+                }
+
+                var quoted = sector.Stocks.Where(s => s.HasQuote).ToList();
+                if (quoted.Count > 0) sector.SetChange(quoted.Average(s => s.ChangePct));
+                else sector.ClearChange();
+            }
         }
     }
 
@@ -368,10 +398,16 @@ public sealed class MainViewModel : ObservableObject
             var probeIds = markets.Select(MarketClock.ProbeSecId)
                 .Where(p => !stockIds.Contains(p, StringComparer.Ordinal))
                 .ToList();
+            var boardIds = Stocks.Select(s => s.BoardName).Distinct(StringComparer.Ordinal)
+                .Select(BoardCatalog.IndexSecId)
+                .Where(id => id != null)
+                .Cast<string>()
+                .ToList();
 
             // Benchmarks are fetched on every tick, even when idle, so openings and holidays
             // are noticed quickly without polling every closed stock.
-            var quotes = await _quotes.FetchQuotesAsync(stockIds.Concat(probeIds), CancellationToken.None)
+            var requestIds = stockIds.Concat(probeIds).Concat(boardIds).Distinct(StringComparer.Ordinal);
+            var quotes = await _quotes.FetchQuotesAsync(requestIds, CancellationToken.None)
                 .ConfigureAwait(true);
 
             if (quotes.Count == 0)
@@ -387,6 +423,13 @@ public sealed class MainViewModel : ObservableObject
             {
                 if (quotes.TryGetValue(MarketClock.ProbeSecId(market), out var probe) && probe.HasData)
                     _heartbeats[market] = probe.UpdatedAt;
+            }
+
+            foreach (var board in Stocks.Select(s => s.BoardName).Distinct(StringComparer.Ordinal))
+            {
+                var indexSecId = BoardCatalog.IndexSecId(board);
+                if (indexSecId != null && quotes.TryGetValue(indexSecId, out var index) && index.HasData)
+                    _boardChanges[board] = index.ChangePct;
             }
 
             // Tencent only has the last US close; overlay Sina's pre-market quote during 04:00–09:30 ET.

@@ -75,6 +75,8 @@ public sealed class StockEntry : ObservableObject
     public string SectorName => string.IsNullOrWhiteSpace(_sector) ? "未分类" : _sector;
     public bool HasSector => _sector.Length > 0;
 
+    public string BoardName => BoardCatalog.Name(Market, Code);
+
     public double Price { get => _price; private set => Set(ref _price, value); }
     public double PrevClose { get => _prevClose; private set => Set(ref _prevClose, value); }
     public double ChangePct { get => _changePct; private set => Set(ref _changePct, value); }
