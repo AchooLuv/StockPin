@@ -333,7 +333,9 @@ public sealed class MainViewModel : ObservableObject
     private async Task LoadPeriodChangesAsync()
     {
         if (_periodsLoading) return;
-        var missing = Stocks.Where(s => !_periodBases.ContainsKey(s.SecId)).ToList();
+        var missing = Stocks
+            .Where(s => s.Market != MarketKind.FUT && !_periodBases.ContainsKey(s.SecId))
+            .ToList();
         if (missing.Count == 0)
         {
             ApplyPeriodBases();
@@ -372,7 +374,8 @@ public sealed class MainViewModel : ObservableObject
     private void MaybeLoadPeriodChanges()
     {
         if (_periodsLoading) return;
-        if (Stocks.All(s => _periodBases.ContainsKey(s.SecId))) return;
+        if (Stocks.Where(s => s.Market != MarketKind.FUT)
+            .All(s => _periodBases.ContainsKey(s.SecId))) return;
         if (DateTime.UtcNow - _lastPeriodAttempt < TimeSpan.FromMinutes(5)) return;
         _ = LoadPeriodChangesAsync();
     }
@@ -387,17 +390,26 @@ public sealed class MainViewModel : ObservableObject
             ["116.00700"] = (393.80, 410.40, 408.20, 409.00, 391.50),
             ["106.ECO"] = (98.05, 92.91, 0, 0, 0),
             ["105.AAPL"] = (339.50, 343.00, 342.10, 344.20, 338.60),
-            ["0.300750"] = (268.40, 264.10, 265.00, 270.20, 263.50)
+            ["0.300750"] = (268.40, 264.10, 265.00, 270.20, 263.50),
+            ["hf_OIL"] = (92.83, 91.95, 0, 93.09, 91.21),
+            ["hf_CL"] = (83.09, 82.31, 0, 83.16, 81.66),
+            ["nf_SC0"] = (585.90, 576.94, 586.30, 591.40, 555.50)
         };
 
         foreach (var entry in Stocks)
         {
             if (!samples.TryGetValue(entry.SecId, out var s)) continue;
             double pct = s.Prev > 0 ? (s.Price - s.Prev) / s.Prev * 100 : 0;
-            // Deterministic preview: A/HK closed, US in pre-market (shows the 盘前 label).
-            string session = entry.Market == MarketKind.US ? "盘前" : "已收盘";
+            // Deterministic preview: A/HK closed, US in pre-market, futures live.
+            string session = entry.Market switch
+            {
+                MarketKind.US => "盘前",
+                MarketKind.FUT => "",
+                _ => "已收盘"
+            };
+            bool open = entry.Market == MarketKind.FUT;
             entry.ApplyQuote(new Quote(entry.SecId, entry.Code, entry.Name, s.Price, s.Prev, pct,
-                s.Price - s.Prev, s.Open, s.High, s.Low, now, true), false, session);
+                s.Price - s.Prev, s.Open, s.High, s.Low, now, true), open, session);
         }
 
         var demoIndices = new Dictionary<string, (double Price, double Pct)>
@@ -453,7 +465,10 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var now = DateTimeOffset.Now;
-            var markets = Stocks.Select(s => s.Market).Distinct().ToList();
+            var markets = Stocks.Select(s => s.Market)
+                .Where(m => m is MarketKind.A or MarketKind.HK or MarketKind.US)
+                .Distinct()
+                .ToList();
             var phases = new Dictionary<string, SessionPhase>(StringComparer.Ordinal);
             var active = new Dictionary<string, bool>(StringComparer.Ordinal);
             var warmup = new Dictionary<string, bool>(StringComparer.Ordinal);
@@ -478,6 +493,26 @@ public sealed class MainViewModel : ObservableObject
             _anyWarmup = markets.Any(m => warmup[m]);
             _anyLunch = markets.Any(m => phases[m] == SessionPhase.Lunch);
 
+            var futures = Stocks.Where(s => s.Market == MarketKind.FUT).ToList();
+            if (futures.Count > 0)
+            {
+                try
+                {
+                    var futuresQuotes = await _quotes
+                        .FetchFuturesAsync(futures.Select(s => s.SecId), CancellationToken.None)
+                        .ConfigureAwait(true);
+                    foreach (var entry in futures)
+                    {
+                        if (futuresQuotes.TryGetValue(entry.SecId, out var quote))
+                            entry.ApplyQuote(quote, true, "");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn("futures fetch failed: " + ex.Message);
+                }
+            }
+
             bool force = _forceAll;
             _forceAll = false;
 
@@ -501,11 +536,14 @@ public sealed class MainViewModel : ObservableObject
 
             // Benchmarks are fetched on every tick, even when idle, so openings and holidays
             // are noticed quickly without polling every closed stock.
-            var requestIds = stockIds.Concat(probeIds).Concat(boardIds).Distinct(StringComparer.Ordinal);
-            var quotes = await _quotes.FetchQuotesAsync(requestIds, CancellationToken.None)
-                .ConfigureAwait(true);
+            var requestIds = stockIds.Concat(probeIds).Concat(boardIds)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            var quotes = requestIds.Count > 0
+                ? await _quotes.FetchQuotesAsync(requestIds, CancellationToken.None).ConfigureAwait(true)
+                : new Dictionary<string, Quote>(StringComparer.Ordinal);
 
-            if (quotes.Count == 0)
+            if (quotes.Count == 0 && requestIds.Count > 0)
             {
                 _failStreak = Math.Min(_failStreak + 1, 6);
                 SetStatus("行情连接异常，正在重试…");
@@ -560,6 +598,8 @@ public sealed class MainViewModel : ObservableObject
 
             foreach (var entry in Stocks)
             {
+                if (entry.Market == MarketKind.FUT) continue;
+
                 DateTimeOffset? hb = _heartbeats.TryGetValue(entry.Market, out var stamp) ? stamp : null;
                 bool trading = MarketClock.IsTrading(entry.Market, now, hb);
                 string session = MarketClock.StatusText(phases[entry.Market], trading);
@@ -617,6 +657,9 @@ public sealed class MainViewModel : ObservableObject
         else if (_anyLunch) seconds = 30;
         else seconds = 60;
 
+        // Futures are quote-only but keep the panel ticking at night when stocks are idle.
+        if (Stocks.Any(s => s.Market == MarketKind.FUT)) seconds = Math.Min(seconds, 10);
+
         // Back off after failures instead of hammering a struggling endpoint at 1s.
         if (_failStreak > 0)
         {
@@ -662,6 +705,9 @@ public sealed class MainViewModel : ObservableObject
 
         foreach (var s in Stocks)
         {
+            // Futures are quote-only.
+            if (s.Market == MarketKind.FUT) continue;
+
             // A holding only counts when both quantity and cost are filled in.
             if (s.Qty <= 0 || s.Cost <= 0) continue;
             any = true;

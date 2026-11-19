@@ -331,6 +331,11 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
+
+                                        <TextBlock Text="{Binding Board.Name}" FontSize="9"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   VerticalAlignment="Center" Margin="7,0,0,0"
+                                                   Visibility="{Binding ShowTitle, Converter={StaticResource BoolToVis}}" />
                                     </StackPanel>
 
                                     <ItemsControl ItemsSource="{Binding Stocks}"

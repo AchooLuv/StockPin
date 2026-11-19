@@ -10,11 +10,13 @@ public static class BoardCatalog
     public const string Beijing = "北证50";
     public const string HongKong = "港股";
     public const string UnitedStates = "美股";
+    public const string Futures = "期货";
 
     public static string Name(string market, string code)
     {
         if (market == MarketKind.HK) return HongKong;
         if (market == MarketKind.US) return UnitedStates;
+        if (market == MarketKind.FUT) return Futures;
 
         if (code.Length == 6)
         {

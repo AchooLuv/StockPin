@@ -79,6 +79,9 @@ public sealed class StockEntry : ObservableObject
     public bool HasSector => _sector.Length > 0;
     public bool ShowSector => Market == MarketKind.A && _sector.Length > 0;
 
+    /// <summary>Futures are quote-only and do not take part in the simulated portfolio.</summary>
+    public bool CanHold => Market != MarketKind.FUT;
+
     public string BoardName => BoardCatalog.Name(Market, Code);
 
     public double Price { get => _price; private set => Set(ref _price, value); }
@@ -197,11 +200,13 @@ public sealed class StockEntry : ObservableObject
     public string LowText => _low > 0 ? Format(_low, Decimals) : "—";
 
     /// <summary>"交易中" / "已收盘" / "盘前" … shown in the tooltip.</summary>
-    public string StateText => _isOpen ? "交易中" : _sessionText.Length > 0 ? _sessionText : "休市";
+    public string StateText => Market == MarketKind.FUT
+        ? "期货行情"
+        : _isOpen ? "交易中" : _sessionText.Length > 0 ? _sessionText : "休市";
 
     public string UpdatedText => _hasQuote ? "更新于 " + _updatedAt.ToLocalTime().ToString("HH:mm:ss") : "";
 
-    public bool HasPosition => _qty > 0;
+    public bool HasPosition => CanHold && _qty > 0;
     public string PositionQtyText => _qty.ToString("N0", CultureInfo.InvariantCulture);
     public string PositionCostText => Format(_cost, Decimals);
 

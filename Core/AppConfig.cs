@@ -20,10 +20,14 @@ public static class MarketKind
     public const string HK = "HK";
     public const string US = "US";
 
+    /// <summary>Quote-only commodity futures (Brent / WTI / Shanghai crude).</summary>
+    public const string FUT = "FUT";
+
     public static string Tag(string market) => market switch
     {
         HK => "港",
         US => "美",
+        FUT => "期",
         _ => "A"
     };
 
@@ -31,6 +35,7 @@ public static class MarketKind
     {
         HK => "港股",
         US => "美股",
+        FUT => "期货",
         _ => "A股"
     };
 
@@ -43,6 +48,7 @@ public static class MarketKind
         {
             "116" => HK,
             "105" or "106" or "107" => US,
+            "102" or "112" or "113" => FUT,
             _ => A
         };
     }

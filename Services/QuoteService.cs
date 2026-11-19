@@ -79,6 +79,86 @@ public sealed class QuoteService : IDisposable
         return result;
     }
 
+    /// <summary>Quote-only Brent / WTI / Shanghai crude from Sina's futures endpoint.</summary>
+    public async Task<Dictionary<string, Quote>> FetchFuturesAsync(IEnumerable<string> secIds, CancellationToken ct)
+    {
+        var result = new Dictionary<string, Quote>(StringComparer.Ordinal);
+        var ids = secIds.Where(FuturesCatalog.Contains)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (ids.Count == 0) return result;
+
+        var text = await GetTextAsync(SinaUrl + string.Join(",", ids),
+            "https://finance.sina.com.cn", ct).ConfigureAwait(false);
+        if (string.IsNullOrEmpty(text)) return result;
+
+        foreach (var rawLine in text.Split('\n'))
+        {
+            int equals = rawLine.IndexOf('=');
+            if (equals < 0) continue;
+
+            var head = rawLine[..equals].Trim();
+            int pos = head.LastIndexOf("hq_str_", StringComparison.Ordinal);
+            if (pos < 0) continue;
+            var symbol = head[(pos + 7)..].Trim();
+            if (!ids.Contains(symbol, StringComparer.Ordinal)) continue;
+
+            int q1 = rawLine.IndexOf('"');
+            int q2 = rawLine.LastIndexOf('"');
+            if (q1 < 0 || q2 <= q1) continue;
+
+            var f = rawLine[(q1 + 1)..q2].Split(',');
+            if (f.Length < 10) continue;
+
+            double price, prev, open, high, low;
+            string name;
+            DateTimeOffset updated;
+
+            if (symbol.StartsWith("hf_", StringComparison.Ordinal))
+            {
+                price = ParseNum(f[0]);
+                prev = ParseNum(f[7]);
+                if (prev <= 0) prev = ParseNum(f[8]);
+                open = ParseNum(f[9]);
+                high = ParseNum(f[4]);
+                low = ParseNum(f[5]);
+                name = symbol == "hf_OIL" ? "布伦特原油" : "WTI原油";
+                updated = ParseSinaTime(f[12], f[6]);
+            }
+            else
+            {
+                if (f.Length < 29) continue;
+                price = ParseNum(f[8]);
+                prev = ParseNum(f[27]);
+                if (prev <= 0) prev = ParseNum(f[28]);
+                open = ParseNum(f[2]);
+                high = ParseNum(f[3]);
+                low = ParseNum(f[4]);
+                name = "上海原油";
+                updated = ParseSinaTime(f[17], f[1]);
+            }
+
+            if (price <= 0) continue;
+
+            var item = FuturesCatalog.Find(symbol);
+            double change = price - prev;
+            double pct = prev > 0 ? change / prev * 100 : 0;
+            result[symbol] = new Quote(symbol, item.Code, name, price, prev, pct, change,
+                open, high, low, updated, true);
+        }
+
+        return result;
+    }
+
+    private static DateTimeOffset ParseSinaTime(string date, string time)
+    {
+        if (DateTime.TryParseExact($"{date.Trim()} {time.Trim()}",
+                new[] { "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HHmmss" },
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+            return new DateTimeOffset(dt, TimeZoneInfo.Local.GetUtcOffset(dt));
+        return DateTimeOffset.Now;
+    }
+
     /// <summary>
     /// US pre-market quotes from Sina. Tencent's US quote only carries the last regular
     /// close, while Sina exposes the 04:00–09:30 ET pre-market price in fields 22–24.
@@ -289,6 +369,12 @@ public sealed class QuoteService : IDisposable
         var input = (keyword ?? "").Trim();
         if (input.Length == 0) return results;
 
+        if (IsFuturesQuery(input))
+        {
+            foreach (var item in FuturesCatalog.Items)
+                results.Add(new StockSearchResult(item.SecId, item.Code, item.Name, MarketKind.FUT, "期货"));
+        }
+
         var url = $"{SearchUrl}?input={Uri.EscapeDataString(input)}&type=14&token={SearchToken}&count=10&_={Epoch()}";
         using var doc = await GetJsonAsync(url, ct).ConfigureAwait(false);
         if (doc == null) return results;
@@ -323,6 +409,16 @@ public sealed class QuoteService : IDisposable
 
         return results;
     }
+
+    private static bool IsFuturesQuery(string input)
+        => input.Contains("原油", StringComparison.Ordinal)
+           || input.Contains("布油", StringComparison.Ordinal)
+           || input.Contains("布伦特", StringComparison.Ordinal)
+           || input.Contains("美油", StringComparison.Ordinal)
+           || input.Contains("期货", StringComparison.Ordinal)
+           || input.Contains("WTI", StringComparison.OrdinalIgnoreCase)
+           || input.StartsWith("SC", StringComparison.OrdinalIgnoreCase)
+           || input.StartsWith("OIL", StringComparison.OrdinalIgnoreCase);
 
     public void Dispose() => _http.Dispose();
 

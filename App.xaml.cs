@@ -371,7 +371,10 @@ public partial class App : Application
                 new() { SecId = "116.00700", Code = "00700", Name = "腾讯控股", Market = MarketKind.HK, Qty = 100, Cost = 388.00, Sector = "软件服务" },
                 new() { SecId = "106.ECO", Code = "ECO", Name = "Okeanis Eco Tankers Corp.", Market = MarketKind.US, Sector = "能源" },
                 new() { SecId = "105.AAPL", Code = "AAPL", Name = "苹果", Market = MarketKind.US, Qty = 20, Cost = 330.00, Sector = "消费电子" },
-                new() { SecId = "0.300750", Code = "300750", Name = "宁德时代", Market = MarketKind.A, Sector = "电池" }
+                new() { SecId = "0.300750", Code = "300750", Name = "宁德时代", Market = MarketKind.A, Sector = "电池" },
+                new() { SecId = "hf_OIL", Code = "OIL", Name = "布伦特原油", Market = MarketKind.FUT },
+                new() { SecId = "hf_CL", Code = "CL", Name = "WTI原油", Market = MarketKind.FUT },
+                new() { SecId = "nf_SC0", Code = "SC0", Name = "上海原油", Market = MarketKind.FUT }
             }
         };
     }
