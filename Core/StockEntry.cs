@@ -58,6 +58,9 @@ public sealed class StockEntry : ObservableObject
     }
 
     public string DisplayName => string.IsNullOrWhiteSpace(_name) ? Code : _name;
+
+    /// <summary>Compact label for the horizontal strip: US uses the ticker, the rest the name.</summary>
+    public string ShortName => Market == MarketKind.US ? Code : DisplayName;
     public string TagText => MarketKind.Tag(Market);
     public string MarketLabel => MarketKind.Label(Market);
 

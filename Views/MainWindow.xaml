@@ -213,7 +213,8 @@
          (a fully transparent layered window is click-through per pixel). -->
     <Border x:Name="Root" Background="#01000000" CornerRadius="12"
             Padding="0,2,0,4" MouseLeftButtonDown="Root_MouseLeftButtonDown">
-        <Grid Effect="{DynamicResource TextShadow}">
+        <Grid>
+            <Grid x:Name="VerticalLayout" Effect="{DynamicResource TextShadow}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="34" />
                 <RowDefinition Height="Auto" />
@@ -243,6 +244,11 @@
                     </Button>
                     <Button Style="{StaticResource PanelIconButton}" Click="Settings_Click" ToolTip="设置">
                         <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
+                    </Button>
+                    <Button x:Name="LayoutButton" Style="{StaticResource PanelIconButton}"
+                            Click="Layout_Click" ToolTip="切换横向小窗">
+                        <TextBlock x:Name="LayoutGlyph" Text="&#x21C4;" FontFamily="Segoe UI Symbol"
+                                   FontSize="12" />
                     </Button>
                     <Button Style="{StaticResource PanelIconButton}" Click="Hide_Click" ToolTip="隐藏到托盘">
                         <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="9" />
@@ -372,6 +378,66 @@
                 <TextBlock Text="{Binding StatusText}" FontSize="9.5"
                            Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis" />
             </Border>
+        </Grid>
+
+            <!-- ================= one-row horizontal strip ================= -->
+            <Grid x:Name="HorizontalLayout" Visibility="Collapsed" Height="34"
+                  Effect="{DynamicResource TextShadow}">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ItemsControl x:Name="HorizontalItems" ItemsSource="{Binding Stocks}"
+                                  Margin="10,0,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,8,0"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding ShortName}" FontSize="9.5"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding PriceText}" FontSize="9.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               Margin="4,0,0,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding ChangePctText}" Tag="{Binding DirectionText}"
+                                               Style="{StaticResource DirectionText}"
+                                               FontSize="9.5" Margin="4,0,0,0"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                Margin="4,0,8,0">
+                    <Button x:Name="HLockButton" Style="{StaticResource PanelIconButton}"
+                            Click="Lock_Click" ToolTip="固定面板位置">
+                        <TextBlock x:Name="HLockGlyph" Text="&#xE718;" FontFamily="Segoe MDL2 Assets"
+                                   FontSize="12.5" />
+                    </Button>
+                    <Button Style="{StaticResource PanelIconButton}" Click="Refresh_Click" ToolTip="立即刷新">
+                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
+                    </Button>
+                    <Button Style="{StaticResource PanelIconButton}" Click="Add_Click" ToolTip="添加股票">
+                        <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
+                    </Button>
+                    <Button Style="{StaticResource PanelIconButton}" Click="Settings_Click" ToolTip="设置">
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
+                    </Button>
+                    <Button x:Name="HLayoutButton" Style="{StaticResource PanelIconButton}"
+                            Click="Layout_Click" ToolTip="切换回纵向小窗">
+                        <TextBlock x:Name="HLayoutGlyph" Text="&#x21C5;" FontFamily="Segoe UI Symbol"
+                                   FontSize="12" />
+                    </Button>
+                    <Button Style="{StaticResource PanelIconButton}" Click="Hide_Click" ToolTip="隐藏到托盘">
+                        <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="9" />
+                    </Button>
+                </StackPanel>
+                </StackPanel>
+            </Grid>
         </Grid>
     </Border>
 </Window>

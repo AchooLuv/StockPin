@@ -11,6 +11,8 @@ public partial class MainWindow : Window
     private ContextMenu? _menu;
     private StockEntry? _ctxStock;
     private bool _allowClose;
+    private double? _verticalLeft;
+    private double? _verticalTop;
 
     private int _backdropTheme = -1;
     private LinearGradientBrush? _plate;
@@ -33,6 +35,7 @@ public partial class MainWindow : Window
         Loaded += OnLoaded;
         Closing += OnClosing;
         PreviewKeyDown += OnPreviewKeyDown;
+        SizeChanged += (_, _) => ClampToScreen();
         BuildMenu();
     }
 
@@ -52,6 +55,14 @@ public partial class MainWindow : Window
         {
             MoveToDefaultPosition();
             Host.SavePanelPosition(Left, Top);
+        }
+
+        ApplyMode();
+
+        if (!_config.Horizontal)
+        {
+            _verticalLeft = Left;
+            _verticalTop = Top;
         }
 
         var src = PresentationSource.FromVisual(this);
@@ -130,17 +141,86 @@ public partial class MainWindow : Window
         var muted = TryFindResource("TextMuted") as Brush ?? Brushes.Gray;
 
         // Pinned: upright pin on a solid chip. Unpinned: lying pin, muted, no chip.
-        LockGlyph.Text = _config.Locked ? "\uE840" : "\uE718";
-        LockButton.ToolTip = _config.Locked ? "取消固定" : "固定面板位置";
+        string glyph = _config.Locked ? "\uE840" : "\uE718";
+        string tip = _config.Locked ? "取消固定" : "固定面板位置";
+        LockGlyph.Text = glyph;
+        HLockGlyph.Text = glyph;
+        LockButton.ToolTip = tip;
+        HLockButton.ToolTip = tip;
         LockGlyph.Foreground = _config.Locked ? buttonText : muted;
+        HLockGlyph.Foreground = _config.Locked ? buttonText : muted;
         LockButton.Background = _config.Locked ? buttonBg : Brushes.Transparent;
+        HLockButton.Background = _config.Locked ? buttonBg : Brushes.Transparent;
         Root.Cursor = _config.Locked ? Cursors.Arrow : Cursors.SizeAll;
+    }
+
+    /// <summary>Switches between the vertical card and the one-row horizontal strip.</summary>
+    private void ApplyMode()
+    {
+        bool horizontal = _config.Horizontal;
+        VerticalLayout.Visibility = horizontal ? Visibility.Collapsed : Visibility.Visible;
+        HorizontalLayout.Visibility = horizontal ? Visibility.Visible : Visibility.Collapsed;
+
+        if (horizontal)
+        {
+            SizeToContent = SizeToContent.WidthAndHeight;
+            Width = double.NaN;
+            Height = double.NaN;
+            MaxWidth = Math.Max(360, WorkArea().Width - 32);
+            MaxHeight = 120;
+        }
+        else
+        {
+            SizeToContent = SizeToContent.Height;
+            Width = 330;
+            Height = double.NaN;
+            MaxWidth = 330;
+            MaxHeight = Math.Max(240, WorkArea().Height - 48);
+            StockScroll.MaxHeight = Math.Max(150, WorkArea().Height * 0.56);
+        }
+
+        UpdateLayout();
+        ClampToScreen();
+        UpdateLayoutGlyphs();
+    }
+
+    private void UpdateLayoutGlyphs()
+    {
+        bool horizontal = _config.Horizontal;
+        string glyph = horizontal ? "\u21C5" : "\u21C4";
+        string tip = horizontal ? "切换回纵向小窗" : "切换横向小窗";
+        LayoutGlyph.Text = glyph;
+        HLayoutGlyph.Text = glyph;
+        LayoutButton.ToolTip = tip;
+        HLayoutButton.ToolTip = tip;
+    }
+
+    private void Layout_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_config.Horizontal)
+        {
+            _verticalLeft = Left;
+            _verticalTop = Top;
+        }
+
+        _config.Horizontal = !_config.Horizontal;
+
+        if (!_config.Horizontal && _verticalLeft is double left && _verticalTop is double top)
+        {
+            Left = left;
+            Top = top;
+        }
+
+        ApplyMode();
+        Host.SavePanelPosition(Left, Top);
+        Host.ApplySettings();
     }
 
     public void MoveToDefaultPosition()
     {
         var area = WorkArea();
-        Left = Math.Max(area.Left, area.Right - Width - 28);
+        double width = ActualWidth > 0 ? ActualWidth : (double.IsNaN(Width) ? 330 : Width);
+        Left = Math.Max(area.Left, area.Right - width - 28);
         Top = area.Top + 80;
         ClampToScreen();
     }
@@ -194,17 +274,21 @@ public partial class MainWindow : Window
         double maxLeft = minLeft + SystemParameters.VirtualScreenWidth;
         double maxTop = minTop + SystemParameters.VirtualScreenHeight;
 
-        double keepVisibleX = Math.Min(120, Width);
+        double keepVisibleX = Math.Min(120, ActualWidth > 0 ? ActualWidth : (double.IsNaN(Width) ? 330 : Width));
         double keepVisibleY = 60;
+        double width = ActualWidth > 0 ? ActualWidth : (double.IsNaN(Width) ? 330 : Width);
 
-        if (Left < minLeft - Width + keepVisibleX || Left > maxLeft - keepVisibleX ||
+        if (Left < minLeft - width + keepVisibleX || Left > maxLeft - keepVisibleX ||
             Top < minTop - 8 || Top > maxTop - keepVisibleY)
         {
             MoveToDefaultPosition();
             return;
         }
 
-        Left = Math.Clamp(Left, minLeft - Width + keepVisibleX, maxLeft - keepVisibleX);
+        if (width <= maxLeft - minLeft)
+            Left = Math.Clamp(Left, minLeft, maxLeft - width);
+        else
+            Left = Math.Clamp(Left, minLeft - width + keepVisibleX, maxLeft - keepVisibleX);
         Top = Math.Clamp(Top, minTop - 8, maxTop - keepVisibleY);
     }
 

@@ -75,6 +75,9 @@ public sealed class AppConfig
 
     /// <summary>Show the board/index strip above each group (上证指数 / 恒生指数 / 纳指 / 道指).</summary>
     public bool ShowIndices { get; set; } = true;
+
+    /// <summary>One-row horizontal strip instead of the vertical card. Default: vertical.</summary>
+    public bool Horizontal { get; set; }
     public double? Left { get; set; }
     public double? Top { get; set; }
     public double? SettingsLeft { get; set; }
