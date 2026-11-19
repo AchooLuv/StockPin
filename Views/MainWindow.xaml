@@ -287,7 +287,8 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="{Binding TopMargin}">
-                                    <StackPanel Orientation="Horizontal" Height="22" Margin="0,0,0,1">
+                                    <StackPanel Orientation="Horizontal" Height="22" Margin="0,0,0,1"
+                                                Visibility="{Binding ShowHeader, Converter={StaticResource BoolToVis}}">
                                         <Border CornerRadius="9" Background="{DynamicResource ChipBg}"
                                                 Padding="7,2" VerticalAlignment="Center"
                                                 Visibility="{Binding ShowSector, Converter={StaticResource BoolToVis}}">
@@ -331,11 +332,6 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-
-                                        <TextBlock Text="{Binding Board.Name}" FontSize="9"
-                                                   Foreground="{DynamicResource TextMuted}"
-                                                   VerticalAlignment="Center" Margin="7,0,0,0"
-                                                   Visibility="{Binding ShowTitle, Converter={StaticResource BoolToVis}}" />
                                     </StackPanel>
 
                                     <ItemsControl ItemsSource="{Binding Stocks}"
