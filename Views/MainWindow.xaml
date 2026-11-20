@@ -212,18 +212,20 @@
          The 1/255 alpha backdrop is invisible but makes the whole panel draggable
          (a fully transparent layered window is click-through per pixel). -->
     <Border x:Name="Root" Background="#01000000" CornerRadius="12"
-            Padding="0,2,0,4" MouseLeftButtonDown="Root_MouseLeftButtonDown">
+            Padding="0,2,0,4" MouseLeftButtonDown="Root_MouseLeftButtonDown"
+            MouseEnter="Root_MouseEnter" MouseLeave="Root_MouseLeave">
         <Grid>
             <Grid x:Name="VerticalLayout" Effect="{DynamicResource TextShadow}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="34" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!-- ================= header: title + quick actions ================= -->
-            <Grid x:Name="Header" Grid.Row="0" Background="Transparent">
+            <Grid x:Name="Header" Grid.Row="0" Height="34" ClipToBounds="True"
+                  Background="Transparent">
                 <StackPanel Orientation="Horizontal" Margin="11,0,0,0" VerticalAlignment="Center">
                     <Ellipse Width="5" Height="5" Fill="{DynamicResource Accent}" VerticalAlignment="Center" />
                     <TextBlock Text="STOCKPIN" Margin="6,0,0,0" FontSize="9.5" FontWeight="SemiBold"
@@ -338,6 +340,11 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
+
+                                        <TextBlock Text="{Binding Board.Name}" FontSize="9"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   VerticalAlignment="Center" Margin="7,0,0,0"
+                                                   Visibility="{Binding ShowTitle, Converter={StaticResource BoolToVis}}" />
                                     </StackPanel>
 
                                     <ItemsControl ItemsSource="{Binding Stocks}"
@@ -411,7 +418,8 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                    <StackPanel x:Name="HorizontalButtons" Orientation="Horizontal"
+                                VerticalAlignment="Center" Width="138" ClipToBounds="True"
                                 Margin="4,0,8,0">
                     <Button x:Name="HLockButton" Style="{StaticResource PanelIconButton}"
                             Click="Lock_Click" ToolTip="固定面板位置">

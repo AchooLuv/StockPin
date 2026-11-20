@@ -1,6 +1,7 @@
 namespace StockPin.Views;
 
 using System.Windows.Interop;
+using System.Windows.Media.Animation;
 
 public partial class MainWindow : Window
 {
@@ -11,6 +12,7 @@ public partial class MainWindow : Window
     private ContextMenu? _menu;
     private StockEntry? _ctxStock;
     private bool _allowClose;
+    private bool _chromeVisible = true;
     private double? _verticalLeft;
     private double? _verticalTop;
 
@@ -233,6 +235,31 @@ public partial class MainWindow : Window
 
     // ------------------------------------------------------------------ window drag
 
+    private void Root_MouseEnter(object sender, MouseEventArgs e)
+        => ShowChrome(true);
+
+    private void Root_MouseLeave(object sender, MouseEventArgs e)
+        => ShowChrome(false);
+
+    /// <summary>Fades/collapses the vertical title bar and the horizontal button bar.</summary>
+    private void ShowChrome(bool show, bool animate = true)
+    {
+        if (_chromeVisible == show) return;
+        _chromeVisible = show;
+
+        var duration = TimeSpan.FromMilliseconds(animate ? 180 : 0);
+        var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+
+        Header.BeginAnimation(HeightProperty,
+            new DoubleAnimation(show ? 34 : 0, duration) { EasingFunction = ease });
+        Header.BeginAnimation(OpacityProperty,
+            new DoubleAnimation(show ? 1 : 0, duration) { EasingFunction = ease });
+        HorizontalButtons.BeginAnimation(WidthProperty,
+            new DoubleAnimation(show ? 138 : 0, duration) { EasingFunction = ease });
+        HorizontalButtons.BeginAnimation(OpacityProperty,
+            new DoubleAnimation(show ? 1 : 0, duration) { EasingFunction = ease });
+    }
+
     private void Root_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (_config.Locked) return;
@@ -289,7 +316,12 @@ public partial class MainWindow : Window
             Left = Math.Clamp(Left, minLeft, maxLeft - width);
         else
             Left = Math.Clamp(Left, minLeft - width + keepVisibleX, maxLeft - keepVisibleX);
-        Top = Math.Clamp(Top, minTop - 8, maxTop - keepVisibleY);
+
+        double height = ActualHeight > 0 ? ActualHeight : (double.IsNaN(Height) ? 200 : Height);
+        if (height <= maxTop - minTop)
+            Top = Math.Clamp(Top, minTop, maxTop - height);
+        else
+            Top = Math.Clamp(Top, minTop - height + keepVisibleY, maxTop - keepVisibleY);
     }
 
     private Rect WorkArea()

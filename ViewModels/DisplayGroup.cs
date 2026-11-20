@@ -19,10 +19,12 @@ public sealed class DisplayGroup
     public bool ShowBoard { get; }
     public bool ShowSector => Sector != null;
 
-    /// <summary>A group has a header only when it has a sector pill or board indices.</summary>
-    public bool ShowHeader => ShowSector || (ShowBoard && Board.Indices.Count > 0);
+    /// <summary>Boards without indices (futures) show their name as the header.</summary>
+    public bool ShowTitle => ShowBoard && Board.Indices.Count == 0;
 
-    public Thickness TopMargin => !ShowHeader
-        ? new Thickness(0, 0, 0, 0)
-        : ShowBoard ? new Thickness(0, 4, 0, 0) : new Thickness(0, 1, 0, 0);
+    public bool ShowHeader => ShowSector || ShowBoard;
+
+    public Thickness TopMargin => ShowBoard
+        ? new Thickness(0, 4, 0, 0)
+        : new Thickness(0, 1, 0, 0);
 }
